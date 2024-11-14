@@ -13,11 +13,10 @@ public class CircleLayer
     }
 
     public Point Center { get; }
-    public int Radius { get; }
+    public int Radius { get; private set; }
 
     private Sector currentSector;
     private readonly List<Rectangle> layerRectangles;
-    private CircleLayer prevLayer;
 
     public CircleLayer(Point center, int radius)
     {
@@ -29,7 +28,7 @@ public class CircleLayer
 
     public CircleLayer OnSuccessInsertRectangle(Rectangle inserted)
     {
-        currentSector = currentSector == Sector.Top_Left ? Sector.Top_Right : currentSector + 1;
+        currentSector = GetNextClockwiseSector();
         layerRectangles.Add(inserted);
         if (ShouldCreateNewCircle()) 
             return CreateNextLayer();
@@ -41,14 +40,18 @@ public class CircleLayer
         return currentSector == Sector.Top_Right;
     }
 
+    private Sector GetNextClockwiseSector()
+    {
+        return currentSector == Sector.Top_Left ? Sector.Top_Right : currentSector + 1;
+    }
+
     private CircleLayer CreateNextLayer()
     {
         var nextLayer = new CircleLayer(Center, CalculateRadiusForNextLayer());
-        nextLayer.prevLayer = this;
         return nextLayer;
     }
 
-    private int CalculateRadiusForNextLayer() //TODO: выбрать наиболее адекватный вариант перерасчёта радиуса
+    private int CalculateRadiusForNextLayer()
     {
         var prevSector = Sector.Top_Right;
         return layerRectangles.Select(r => CalculateDistanceBetweenCenterAndRectangleBySector(r, prevSector++)).Min();
@@ -111,15 +114,28 @@ public class CircleLayer
         var nextPosition = CalculateNewPositionWithoutIntersectionBySector(currentSector, forInsertion, intersected);
         if (IsNextPositionMoveToAnotherSector(nextPosition, forInsertion.Size))
         {
+            currentSector = GetNextClockwiseSector();
             if (ShouldCreateNewCircle())
             {
-
+                CreateNextLayerAndChangeCurrentOnNext();
             }
-
-            currentSector += 1;
             nextPosition = CalculateTopLeftRectangleCornerPosition(forInsertion.Size);
         }
         return nextPosition;
+    }
+
+    private void CreateNextLayerAndChangeCurrentOnNext()
+    {
+        var nextLayer = CreateNextLayer();
+        ChangeCurrentLayerBy(nextLayer);
+    }
+
+    private void ChangeCurrentLayerBy(CircleLayer next)
+    {
+        Radius = next.Radius;
+        currentSector = next.currentSector;
+        layerRectangles.Clear();
+        layerRectangles.AddRange(next.layerRectangles);
     }
 
     private bool IsNextPositionMoveToAnotherSector(Point next, Size forInsertionSize)
@@ -131,8 +147,6 @@ public class CircleLayer
     {
         return (r.Left < Center.X && r.Right > Center.X) || (r.Bottom > Center.Y && r.Top < Center.Y);
     }
-
-    //TODO: переписать везде где можно подсчёт координат на свойства прямоугольника Top, Bottom и так далее
 
     private Point CalculateNewPositionWithoutIntersectionBySector(Sector s, Rectangle forInsertion, Rectangle intersected)
     {

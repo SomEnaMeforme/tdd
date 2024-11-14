@@ -10,6 +10,7 @@ namespace TagsCloudVisualization.Tests
 {
     public class CircularCloudLayouterTests
     {
+
         private CircularCloudLayouter layouter;
         private Point defaultCenter;
 
@@ -49,11 +50,11 @@ namespace TagsCloudVisualization.Tests
             layouter.CurrentLayer.Should().NotBeNull();
         }
 
-        [TestCase(6, 4, 3)]
-        [TestCase(4, 6, 3)]
-        [TestCase(2, 2, 1)]
-        [TestCase(5, 9, 5)]
-        public void PutNextRectangle_ShouldCreateFirstCircleLayer_WithRadiusEqualHalfMaxSizeOfFirstRectangleRoundToInt(int height, int width, int expected)
+        [TestCase(6, 4, 4)]
+        [TestCase(4, 6, 4)]
+        [TestCase(2, 2, 2)]
+        [TestCase(5, 9, 6)]
+        public void PutNextRectangle_ShouldCreateFirstCircleLayer_WithRadiusEqualHalfDiagonalFirstRectangleRoundToInt(int height, int width, int expected)
         {
             var firstRectangleSize = new Size(width, height);
 
@@ -77,12 +78,30 @@ namespace TagsCloudVisualization.Tests
         public void PutNextRectangle_ShouldUseCircleLayer_ForChoosePositionForRectangle()
         {
             var firstRectangleSize = new Size(4, 4);
-            var expected = new Point(5, -1);
+            var expectedRadius = 7;
+            var expected = new Point(defaultCenter.X, defaultCenter.Y - expectedRadius);
 
             layouter.PutNextRectangle(firstRectangleSize);
             var secondRectangleLocation = layouter.PutNextRectangle(firstRectangleSize).Location;
 
             secondRectangleLocation.Should().Be(expected);
+        }
+
+        [Test]
+        public void PutNextRectangle_ShouldPutRectangleWithoutIntersection_WhenNeedOneMoveForDeleteIntersection()
+        {
+            var firstRectangleSize = new Size(6, 4);
+            var expected = new Point(9, 1);
+
+            layouter.PutNextRectangle(firstRectangleSize);
+            layouter.PutNextRectangle(new Size(4, 4));
+            layouter.PutNextRectangle(new Size(4, 4));
+            layouter.PutNextRectangle(new Size(4, 4));
+            layouter.PutNextRectangle(new Size(4, 4));
+
+            var rectangleLocation = layouter.PutNextRectangle(new Size(3, 3)).Location;
+
+            rectangleLocation.Should().Be(expected);
         }
     }
 }

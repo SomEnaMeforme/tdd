@@ -26,9 +26,11 @@ namespace TagsCloudVisualization
             if (rectangles.Count == 0)
                 return null;
             var calculator = GetMinDistanceCalculatorBy(direction);
-            return rectangles.Select(currentRectangle => (distance: calculator(currentRectangle, r), CurrentEl: currentRectangle))
-                .Where(el => el.distance > 0)
-                .MinBy(el => el.distance).CurrentEl;
+            var nearestByDirection = rectangles.Select(currentRectangle =>
+                    (distance: calculator(currentRectangle, r), CurrentEl: currentRectangle))
+                .Where(el => el.distance >= 0).ToList();
+
+            return nearestByDirection.Count > 0 ? nearestByDirection.MinBy(el => el.distance).CurrentEl : null;
         }
 
         private Func<Rectangle, Rectangle, int> GetMinDistanceCalculatorBy(Direction direction)

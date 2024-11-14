@@ -1,14 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Runtime.InteropServices.Marshalling;
-using System.Text;
-using System.Threading.Tasks;
+﻿using FluentAssertions;
 using NUnit.Framework;
-using FluentAssertions;
+using System.Drawing;
 using static TagsCloudVisualization.CircleLayer;
-using System.Reflection.Emit;
 
 namespace TagsCloudVisualization.Tests
 {
@@ -46,7 +39,7 @@ namespace TagsCloudVisualization.Tests
         }
 
         [Test]
-        public void CircleLayer_GetNewLayer_AfterInsertionsOnAllSectors()
+        public void CircleLayer_ShouldCreateNewLayer_AfterInsertionsOnAllSectors()
         {
             currentLayer = GetLayerAfterFewInsertionsRectangleWithSameSize(currentLayer, 3);
 
@@ -190,25 +183,20 @@ namespace TagsCloudVisualization.Tests
         }
 
         [Test]
-        public void GetPositionOnCircleWithoutIntersection_ShouldMoveRectangleClockwiseAndChangeSector_UntilFindsNewPosition()
+        public void GetPositionOnCircleWithoutIntersection_ShouldChangeCornerPositiomForSector_WhenMoveRectangleClockwise()
         {
-            var fullLayer = GetLayerWithFullFirstLayerForIntersection(currentLayer);
+            var sizesForInsertions = new Size[]
+            {
+                new (1,1), new(5,8), new (4,4), new (4,4), new(4,4)
+            };
+            var fullLayer = GetLayerAfterFewInsertionsRectangleWithDifferentSize(currentLayer, sizesForInsertions.Length,
+                sizesForInsertions);
             var forInsertion = new Rectangle(new (11, 5), new (6,6));
             var intersected = new Rectangle(new(10, 5),new(5, 8));
 
             var newPosition = fullLayer.GetRectanglePositionWithoutIntersection(forInsertion, intersected);
 
             newPosition.Should().Be(new Point(-1, 12));
-        }
-
-        private CircleLayer GetLayerWithFullFirstLayerForIntersection(CircleLayer layer)
-        {
-            var sizesForInsertions = new Size[]
-            {
-                new (1,1), new(5,8), new (4,4), new (4,4), new(4,4)
-            };
-            return GetLayerAfterFewInsertionsRectangleWithDifferentSize(layer, sizesForInsertions.Length,
-                sizesForInsertions);
         }
 
         private CircleLayer GetLayerAfterFewInsertionsRectangleWithDifferentSize(CircleLayer layer, int insertionsCount, Size[] sizes)
@@ -220,6 +208,26 @@ namespace TagsCloudVisualization.Tests
                 layer = layer.OnSuccessInsertRectangle(rectangleForInsert);
             }
             return layer;
+        }
+
+
+        [Test]
+        public void GetPositionOnCircleWithoutIntersection_ShouldCreateNewCircle_IfNeedMoveRectangleFromLastSector()
+        {
+            var intersectedSize = new Size(4, 9);
+            var sizesForInsertions = new Size[]
+            {
+                new (1,1), new(1,8), new (4,2), intersectedSize, 
+                new(1,1), new(1,1), new(1,1)
+            };
+            var fullLayer = GetLayerAfterFewInsertionsRectangleWithDifferentSize(currentLayer, sizesForInsertions.Length,
+                sizesForInsertions);
+            var forInsertion = new Rectangle(new(-8,2), new(8, 3));
+            var intersected = new Rectangle(new(-4, -4), intersectedSize);
+
+            var newPosition = fullLayer.GetRectanglePositionWithoutIntersection(forInsertion, intersected);
+
+            newPosition.Should().Be(new Point(5, -5));
         }
     }
 }

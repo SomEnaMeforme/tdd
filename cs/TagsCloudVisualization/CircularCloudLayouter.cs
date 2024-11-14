@@ -32,6 +32,14 @@ namespace TagsCloudVisualization
             {
                 var possiblePosition = CurrentLayer.CalculateTopLeftRectangleCornerPosition(rectangleSize);
                 resultRectangle = new Rectangle(possiblePosition, rectangleSize);
+                var intersected = GetRectangleIntersection(resultRectangle);
+                while (intersected != new Rectangle())
+                {
+                    possiblePosition =
+                        CurrentLayer.GetRectanglePositionWithoutIntersection(resultRectangle, intersected.Value);
+                    resultRectangle = new Rectangle(possiblePosition, rectangleSize);
+                    intersected = GetRectangleIntersection(resultRectangle);
+                }
             }
             OnSuccessInsertion(resultRectangle);
             return resultRectangle;
@@ -45,9 +53,26 @@ namespace TagsCloudVisualization
                 CurrentLayer.OnSuccessInsertRectangle(r);
         }
 
+        private Rectangle? GetRectangleIntersection(Rectangle forInsertion)
+        {
+            return rectanglesLocation
+                .FirstOrDefault(forInsertion.IntersectsWith);
+        }
+
+        private Rectangle?[] GetNearestByAllDirectionsFor(Rectangle r)
+        {
+            return new []
+            {
+                nearestFinder.FindNearestByDirection(r, Direction.Bottom),
+                nearestFinder.FindNearestByDirection(r, Direction.Top),
+                nearestFinder.FindNearestByDirection(r, Direction.Left),
+                nearestFinder.FindNearestByDirection(r, Direction.Right)
+            };
+        }
+
         private void CreateFirstLayer(Size firstRectangle)
         {
-            var radius = Math.Ceiling(Math.Max(firstRectangle.Width, firstRectangle.Height) / 2.0);
+            var radius = Math.Ceiling(Math.Sqrt(firstRectangle.Width* firstRectangle.Width + firstRectangle.Height* firstRectangle.Height) / 2.0);
             CurrentLayer = new CircleLayer(center, (int)radius);
         }
 
