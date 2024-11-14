@@ -29,7 +29,7 @@ namespace TagsCloudVisualization.Tests
         {
             var possibleRectangleLocation = currentLayer.CalculateTopLeftRectangleCornerPosition(defaultRectangleSize);
 
-            possibleRectangleLocation.Should().Be(GetCorrectRectangleLocationByExpectedSector(Sector.Top_Right));
+            possibleRectangleLocation.Should().Be(GetCorrectRectangleLocationByExpectedSector(Sector.Top_Right, defaultRectangleSize));
         }
 
         [TestCase(1, Sector.Bottom_Right)]
@@ -41,7 +41,7 @@ namespace TagsCloudVisualization.Tests
 
             var possibleRectangleLocation = currentLayer.CalculateTopLeftRectangleCornerPosition(defaultRectangleSize);
 
-            possibleRectangleLocation.Should().Be(GetCorrectRectangleLocationByExpectedSector(expected));
+            possibleRectangleLocation.Should().Be(GetCorrectRectangleLocationByExpectedSector(expected, defaultRectangleSize));
         }
 
         [Test]
@@ -55,24 +55,20 @@ namespace TagsCloudVisualization.Tests
         }
 
         [Test]
-        public void CircleLayer_RadiusNextCircleLayer_ShouldBeIntMaxDistanceFromCenterToInsertedRectangle()
+        public void CircleLayer_RadiusNextCircleLayer_ShouldBeIntMinDistanceFromCenterToInsertedRectangle()
         {
             currentLayer = GetLayerAfterFewInsertionsRectangleWithSameSize(currentLayer, 3);
-            var nextRectangleLocation = GetCorrectRectangleLocationByExpectedSector(GetSectorByInsertionsCount(4));
+            var nextRectangleLocation = GetCorrectRectangleLocationByExpectedSector(GetSectorByInsertionsCount(4), defaultRectangleSize);
 
             var nextLayer = currentLayer.OnSuccessInsertRectangle(new Rectangle(nextRectangleLocation, new Size(2,2)));
 
-            nextLayer.Radius.Should().Be(10);
+            nextLayer.Radius.Should().Be(9);
         }
 
         private CircleLayer GetLayerAfterFewInsertionsRectangleWithSameSize(CircleLayer layer, int insertionsCount)
         {
-            for (var i = 0; i < insertionsCount; i++)
-            {
-                var location = GetCorrectRectangleLocationByExpectedSector(GetSectorByInsertionsCount(i));
-                var rectangleForInsert = new Rectangle(location, defaultRectangleSize);
-                layer.OnSuccessInsertRectangle(rectangleForInsert);
-            }
+            layer = GetLayerAfterFewInsertionsRectangleWithDifferentSize(layer, insertionsCount,
+                new Size[insertionsCount].Select(x => defaultRectangleSize).ToArray());
             return layer;
         }
 
@@ -81,19 +77,19 @@ namespace TagsCloudVisualization.Tests
             return (Sector)((count - 1) % 4);
         }
 
-        private Point GetCorrectRectangleLocationByExpectedSector(Sector s)
+        private Point GetCorrectRectangleLocationByExpectedSector(Sector s, Size size)
         {
             switch (s)
             {
                 case Sector.Top_Right: 
-                    return new Point(currentLayer.Center.X, currentLayer.Center.Y - currentLayer.Radius - defaultRectangleSize.Height);
+                    return new Point(currentLayer.Center.X, currentLayer.Center.Y - currentLayer.Radius - size.Height);
                 case Sector.Bottom_Right: 
                     return new Point(currentLayer.Center.X + currentLayer.Radius, currentLayer.Center.Y);
                 case Sector.Bottom_Left: 
-                    return new Point(currentLayer.Center.X - defaultRectangleSize.Width, currentLayer.Center.Y + currentLayer.Radius);
+                    return new Point(currentLayer.Center.X - size.Width, currentLayer.Center.Y + currentLayer.Radius);
                 default: 
-                    return new Point(currentLayer.Center.X - currentLayer.Radius - defaultRectangleSize.Width,
-                    currentLayer.Center.Y - defaultRectangleSize.Height);
+                    return new Point(currentLayer.Center.X - currentLayer.Radius - size.Width,
+                    currentLayer.Center.Y - size.Height);
             }
         }
 
@@ -164,8 +160,8 @@ namespace TagsCloudVisualization.Tests
         [Test]
         public void GetPositionOnCircleWithoutIntersection_ReturnCorrectRectanglePosition_WhenFoundIntersectionInTopLeftSector()
         {
-            var rectangleForInsertion = new Rectangle(new Point(-3, -2), new Size(4, 3));
-            var intersectedRectangle = new Rectangle(new Point(-7, 1), new Size(8, 7));
+            var rectangleForInsertion = new Rectangle(new (-3, -2), new (4, 3));
+            var intersectedRectangle = new Rectangle(new (-7, 1), new (8, 7));
             currentLayer = GetLayerAfterFewInsertionsRectangleWithSameSize(currentLayer, 3);
             var expected = new Point(1, -3);
 
@@ -178,6 +174,47 @@ namespace TagsCloudVisualization.Tests
         {
             return (p.X - currentLayer.Center.X) * (p.X - currentLayer.Center.X) +
                 (p.Y - currentLayer.Center.Y) * (p.Y - currentLayer.Center.Y) == currentLayer.Radius * currentLayer.Radius;
+        }
+
+        [Test]
+        public void GetPositionOnCircleWithoutIntersection_ShouldMoveRectangleClockwiseAndChangeSector_UntilFindsNewPosition()
+        {
+            var fullLayer = GetLayerWithFullFirstLayerForIntersection(currentLayer);
+            var forInsertion = new Rectangle(new (11, 5), new (6,6));
+            var intersected = new Rectangle(new(10, 5),new(5, 8));
+
+            var newPosition = fullLayer.GetRectanglePositionWithoutIntersection(forInsertion, intersected);
+
+            newPosition.Should().Be(new Point(-1, 11));
+        }
+
+        [Test]
+        public void CircleLayer_RadiusNextCircleLayer_ShouldBeIntMinDistanceFromCenterToInsertedRectangle2()
+        {
+            var nextLayer = GetLayerWithFullFirstLayerForIntersection(currentLayer);
+
+            nextLayer.Radius.Should().Be(10);
+        }
+
+        private CircleLayer GetLayerWithFullFirstLayerForIntersection(CircleLayer layer)
+        {
+            var sizesForInsertions = new Size[]
+            {
+                new (8,1), new(5,8), new (4,4), new (4,4), new(4,4)
+            };
+            return GetLayerAfterFewInsertionsRectangleWithDifferentSize(layer, sizesForInsertions.Length,
+                sizesForInsertions);
+        }
+
+        private CircleLayer GetLayerAfterFewInsertionsRectangleWithDifferentSize(CircleLayer layer, int insertionsCount, Size[] sizes)
+        {
+            for (var i = 1; i <= insertionsCount; i++)
+            {
+                var location = GetCorrectRectangleLocationByExpectedSector(GetSectorByInsertionsCount(i), sizes[i - 1]);
+                var rectangleForInsert = new Rectangle(location, sizes[i - 1]);
+                layer = layer.OnSuccessInsertRectangle(rectangleForInsert);
+            }
+            return layer;
         }
     }
 }

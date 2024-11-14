@@ -44,24 +44,38 @@ public class CircleLayer
         return nextLayer;
     }
 
-    private int CalculateRadiusForNextLayer()
+    private int CalculateRadiusForNextLayer() //TODO: выбрать наиболее адекватный вариант перерасчёта радиуса
     {
-        var prevSector = Sector.Top_Right - 1;
-        return layerRectangles.Select(r => CalculateDistanceBetweenCenterAndRectangleBySector(r, prevSector + 1)).Max();
+        var prevSector = Sector.Top_Right;
+        return layerRectangles.Select(r => CalculateDistanceBetweenCenterAndRectangleBySector(r, prevSector++)).Min();
     }
 
+    //private Sector GetSectorNextClockwise(Sector s)
+    //{
+    //    switch (s)
+    //    {
+    //        case Sector.Top_Right:
+    //            return Sector.Bottom_Right;
+    //        case Sector.Bottom_Right:
+    //            return Sector.Bottom_Left;
+    //        case Sector.Bottom_Left:
+    //            return Sector.Top_Left;
+    //        default:
+    //            return CalculateDistanceBetweenPoints(Center, new Point(r.Left, r.Top));
+    //    }
+    //}
     private int CalculateDistanceBetweenCenterAndRectangleBySector(Rectangle r, Sector s)
     {
         switch (s)
         {
             case Sector.Top_Right: 
-                return CalculateDistanceBetweenPoints(Center, new Point(r.X + r.Width, r.Y));
+                return CalculateDistanceBetweenPoints(Center, new Point(r.Right, r.Top));
             case Sector.Bottom_Right:
-                return CalculateDistanceBetweenPoints(Center, new Point(r.X + r.Width, r.Y + r.Height));
+                return CalculateDistanceBetweenPoints(Center, new Point(r.Right, r.Bottom));
             case Sector.Bottom_Left:
-                return CalculateDistanceBetweenPoints(Center, new Point(r.X - r.Width, r.Y + r.Height));
+                return CalculateDistanceBetweenPoints(Center, new Point(r.Left, r.Bottom));
             default: 
-                return CalculateDistanceBetweenPoints(Center, new Point(r.X - r.Width, r.Y));
+                return CalculateDistanceBetweenPoints(Center, new Point(r.Left, r.Top));
         }
     }
 
@@ -72,22 +86,22 @@ public class CircleLayer
 
     public Point CalculateTopLeftRectangleCornerPosition(Size rectangleSize)
     {
-        var relevantForSectorPosition = GetPositionRelevantForSector();
+        var rectangleStartPositionOnCircle = GetStartSectorPointOnCircle();
         switch (currentSector)
         {
             case Sector.Top_Right:
-                return new Point(relevantForSectorPosition.X, relevantForSectorPosition.Y - rectangleSize.Height);
+                return new Point(rectangleStartPositionOnCircle.X, rectangleStartPositionOnCircle.Y - rectangleSize.Height);
             case Sector.Bottom_Right: 
-                return relevantForSectorPosition;
+                return rectangleStartPositionOnCircle;
             case Sector.Bottom_Left:
-                return new Point(relevantForSectorPosition.X - rectangleSize.Width, relevantForSectorPosition.Y);
+                return new Point(rectangleStartPositionOnCircle.X - rectangleSize.Width, rectangleStartPositionOnCircle.Y);
             default:
-                return new Point(relevantForSectorPosition.X - rectangleSize.Width,
-                    relevantForSectorPosition.Y - rectangleSize.Height);
+                return new Point(rectangleStartPositionOnCircle.X - rectangleSize.Width,
+                    rectangleStartPositionOnCircle.Y - rectangleSize.Height);
         }
     }
 
-    private Point GetPositionRelevantForSector()
+    private Point GetStartSectorPointOnCircle()
     {
         switch (currentSector)
         {
@@ -106,6 +120,10 @@ public class CircleLayer
     {
         return CalculateNewPositionWithoutIntersectionBySector(currentSector, forInsertion, intersected);
     }
+
+    //TODO: переписать везде где можно подсчёт координат на свойства прямоугольника Top, Bottom и так далее
+    //TODO: пересечения для разных расположений четырёхугольника
+    //TODO: подумать, как считать радиус окружности адекватно
 
     private Point CalculateNewPositionWithoutIntersectionBySector(Sector s, Rectangle forInsertion, Rectangle intersected)
     {
