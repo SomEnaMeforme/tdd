@@ -14,39 +14,30 @@ namespace TagsCloudVisualization
 
         public void Insert(Rectangle r)
         {
-            if (RectangleHasInсorrectSize(r))
-                throw new ArgumentException($"Rectangle has incorrect size: width = {r.Width}, height = {r.Height}");
             rectangles.Add(r);
         }
 
         public Rectangle? FindNearestByDirection(Rectangle r, Direction direction)
         {
-            if (RectangleHasInсorrectSize(r))
-                throw new ArgumentException($"Rectangle has incorrect size: width= {r.Width}, height={r.Height}");
             if (rectangles.Count == 0)
                 return null;
             var calculator = GetMinDistanceCalculatorBy(direction);
-            var nearestByDirection = rectangles.Select(currentRectangle =>
-                    (distance: calculator(currentRectangle, r), CurrentEl: currentRectangle))
-                .Where(el => el.distance >= 0).ToList();
+            var nearestByDirection = rectangles
+                .Select(possibleNearest => (Distance: calculator(possibleNearest, r), CurrentEl: possibleNearest))
+                .Where(el => el.Distance >= 0).ToList();
 
-            return nearestByDirection.Count > 0 ? nearestByDirection.MinBy(el => el.distance).CurrentEl : null;
+            return nearestByDirection.Count > 0 ? nearestByDirection.MinBy(el => el.Distance).CurrentEl : null;
         }
 
         private Func<Rectangle, Rectangle, int> GetMinDistanceCalculatorBy(Direction direction)
         {
             switch (direction)
             {
-                case Direction.Left: return (possibleNearest, rectangleForFind) => rectangleForFind.X - possibleNearest.X;
-                case Direction.Right: return (possibleNearest, rectangleForFind) => possibleNearest.X - rectangleForFind.X;
-                case Direction.Top: return (possibleNearest, rectangleForFind) => rectangleForFind.Y - possibleNearest.Y;
-                default: return (possibleNearest, rectangleForFind) => possibleNearest.Y - rectangleForFind.Y;
+                case Direction.Left: return (possibleNearest, rectangleForFind) => possibleNearest.Right - rectangleForFind.Left;
+                case Direction.Right: return (possibleNearest, rectangleForFind) => possibleNearest.Left - rectangleForFind.Right;
+                case Direction.Top: return (possibleNearest, rectangleForFind) => rectangleForFind.Top - possibleNearest.Bottom;
+                default: return (possibleNearest, rectangleForFind) => possibleNearest.Top - rectangleForFind.Bottom;
             }
-        }
-
-        private bool RectangleHasInсorrectSize(Rectangle r)
-        {
-            return r.Width <= 0 || r.Height <= 0;
         }
     }
 }

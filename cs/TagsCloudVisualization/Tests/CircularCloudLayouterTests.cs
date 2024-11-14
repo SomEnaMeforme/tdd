@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using NUnit.Framework;
 using FluentAssertions;
+using System.Reflection;
+using static System.Collections.Specialized.BitVector32;
 
 namespace TagsCloudVisualization.Tests
 {
@@ -19,6 +21,21 @@ namespace TagsCloudVisualization.Tests
         {
             defaultCenter = new Point(5, 5);
             layouter = new CircularCloudLayouter(defaultCenter);
+        }
+
+        [TestCase(0, 4, TestName = "WhenWidthZero")]
+        [TestCase(3, 0, TestName = "WhenHeightZero")]
+        [TestCase(-3, 4, TestName = "WhenWidthIsNegative")]
+        [TestCase(3, -4, TestName = "WhenHeightNegative")]
+        [TestCase(-3, -4, TestName = "WhenWidthAndHeightNegative")]
+        [TestCase(0, 0, TestName = "WhenWidthAndHeightIsZero")]
+        public void Insert_ShouldThrow(int width, int height)
+        {
+            var inCorrectSize = new Size(width, height);
+
+            Action act = () => layouter.PutNextRectangle(inCorrectSize);
+
+            act.Should().Throw<ArgumentException>();
         }
 
         [Test]

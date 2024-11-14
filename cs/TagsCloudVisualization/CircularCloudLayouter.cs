@@ -22,6 +22,7 @@ namespace TagsCloudVisualization
         }
         public Rectangle PutNextRectangle(Size rectangleSize)
         {
+            ValidateRectangleSize(rectangleSize);
             Rectangle resultRectangle;
             if (IsFirstRectangle())
             {
@@ -43,6 +44,13 @@ namespace TagsCloudVisualization
             }
             OnSuccessInsertion(resultRectangle);
             return resultRectangle;
+        }
+        private void ValidateRectangleSize(Size s)
+        {
+            if (s.Width <= 0 || s.Height <= 0)
+            {
+                throw new ArgumentException($"Rectangle has incorrect size: width = {s.Width}, height = {s.Height}");
+            }
         }
 
         private void OnSuccessInsertion(Rectangle r)
