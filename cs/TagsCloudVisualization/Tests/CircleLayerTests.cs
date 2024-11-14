@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using FluentAssertions;
 using static TagsCloudVisualization.CircleLayer;
+using System.Reflection.Emit;
 
 namespace TagsCloudVisualization.Tests
 {
@@ -177,6 +178,18 @@ namespace TagsCloudVisualization.Tests
         }
 
         [Test]
+        public void CircleLayer_RadiusNextCircleLayer_ShouldBeCeilingToInt()
+        {
+            var sizes = new Size[]
+            {
+                new (8,1), new(7,8), new (4,4), new (4,4), new(4,4)
+            };
+            var nextLayer = GetLayerAfterFewInsertionsRectangleWithDifferentSize(currentLayer, sizes.Length, sizes);
+
+            nextLayer.Radius.Should().Be(10);
+        }
+
+        [Test]
         public void GetPositionOnCircleWithoutIntersection_ShouldMoveRectangleClockwiseAndChangeSector_UntilFindsNewPosition()
         {
             var fullLayer = GetLayerWithFullFirstLayerForIntersection(currentLayer);
@@ -185,22 +198,14 @@ namespace TagsCloudVisualization.Tests
 
             var newPosition = fullLayer.GetRectanglePositionWithoutIntersection(forInsertion, intersected);
 
-            newPosition.Should().Be(new Point(-1, 11));
-        }
-
-        [Test]
-        public void CircleLayer_RadiusNextCircleLayer_ShouldBeIntMinDistanceFromCenterToInsertedRectangle2()
-        {
-            var nextLayer = GetLayerWithFullFirstLayerForIntersection(currentLayer);
-
-            nextLayer.Radius.Should().Be(10);
+            newPosition.Should().Be(new Point(-1, 12));
         }
 
         private CircleLayer GetLayerWithFullFirstLayerForIntersection(CircleLayer layer)
         {
             var sizesForInsertions = new Size[]
             {
-                new (8,1), new(5,8), new (4,4), new (4,4), new(4,4)
+                new (1,1), new(5,8), new (4,4), new (4,4), new(4,4)
             };
             return GetLayerAfterFewInsertionsRectangleWithDifferentSize(layer, sizesForInsertions.Length,
                 sizesForInsertions);

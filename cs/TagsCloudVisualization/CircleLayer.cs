@@ -15,7 +15,6 @@ public class CircleLayer
     public Point Center { get; }
     public int Radius { get; }
 
-
     private Sector currentSector;
     private readonly List<Rectangle> layerRectangles;
     private CircleLayer prevLayer;
@@ -32,9 +31,14 @@ public class CircleLayer
     {
         currentSector = currentSector == Sector.Top_Left ? Sector.Top_Right : currentSector + 1;
         layerRectangles.Add(inserted);
-        if (currentSector == Sector.Top_Right) 
+        if (ShouldCreateNewCircle()) 
             return CreateNextLayer();
         return this;
+    }
+
+    private bool ShouldCreateNewCircle()
+    {
+        return currentSector == Sector.Top_Right;
     }
 
     private CircleLayer CreateNextLayer()
@@ -50,20 +54,6 @@ public class CircleLayer
         return layerRectangles.Select(r => CalculateDistanceBetweenCenterAndRectangleBySector(r, prevSector++)).Min();
     }
 
-    //private Sector GetSectorNextClockwise(Sector s)
-    //{
-    //    switch (s)
-    //    {
-    //        case Sector.Top_Right:
-    //            return Sector.Bottom_Right;
-    //        case Sector.Bottom_Right:
-    //            return Sector.Bottom_Left;
-    //        case Sector.Bottom_Left:
-    //            return Sector.Top_Left;
-    //        default:
-    //            return CalculateDistanceBetweenPoints(Center, new Point(r.Left, r.Top));
-    //    }
-    //}
     private int CalculateDistanceBetweenCenterAndRectangleBySector(Rectangle r, Sector s)
     {
         switch (s)
@@ -86,7 +76,7 @@ public class CircleLayer
 
     public Point CalculateTopLeftRectangleCornerPosition(Size rectangleSize)
     {
-        var rectangleStartPositionOnCircle = GetStartSectorPointOnCircle();
+        var rectangleStartPositionOnCircle = GetStartSectorPointOnCircleBySector(currentSector);
         switch (currentSector)
         {
             case Sector.Top_Right:
@@ -101,9 +91,9 @@ public class CircleLayer
         }
     }
 
-    private Point GetStartSectorPointOnCircle()
+    private Point GetStartSectorPointOnCircleBySector(Sector s)
     {
-        switch (currentSector)
+        switch (s)
         {
             case Sector.Top_Right: 
                 return new Point(Center.X, Center.Y - Radius);
@@ -118,12 +108,31 @@ public class CircleLayer
 
     public Point GetRectanglePositionWithoutIntersection(Rectangle forInsertion, Rectangle intersected)
     {
-        return CalculateNewPositionWithoutIntersectionBySector(currentSector, forInsertion, intersected);
+        var nextPosition = CalculateNewPositionWithoutIntersectionBySector(currentSector, forInsertion, intersected);
+        if (IsNextPositionMoveToAnotherSector(nextPosition, forInsertion.Size))
+        {
+            if (ShouldCreateNewCircle())
+            {
+
+            }
+
+            currentSector += 1;
+            nextPosition = CalculateTopLeftRectangleCornerPosition(forInsertion.Size);
+        }
+        return nextPosition;
+    }
+
+    private bool IsNextPositionMoveToAnotherSector(Point next, Size forInsertionSize)
+    {
+        return IsRectangleIntersectSymmetryAxis(new Rectangle(next, forInsertionSize));
+    }
+
+    private bool IsRectangleIntersectSymmetryAxis(Rectangle r)
+    {
+        return (r.Left < Center.X && r.Right > Center.X) || (r.Bottom > Center.Y && r.Top < Center.Y);
     }
 
     //TODO: переписать везде где можно подсчёт координат на свойства прямоугольника Top, Bottom и так далее
-    //TODO: пересечения для разных расположений четырёхугольника
-    //TODO: подумать, как считать радиус окружности адекватно
 
     private Point CalculateNewPositionWithoutIntersectionBySector(Sector s, Rectangle forInsertion, Rectangle intersected)
     {
