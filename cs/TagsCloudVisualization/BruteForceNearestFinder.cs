@@ -10,16 +10,9 @@ namespace TagsCloudVisualization
 {
     public class BruteForceNearestFinder
     {
-        private List<Rectangle> rectangles = new();
-
-        public void Insert(Rectangle r)
+        public Rectangle? FindNearestByDirection(Rectangle r, Direction direction, IEnumerable<Rectangle> rectangles)
         {
-            rectangles.Add(r);
-        }
-
-        public Rectangle? FindNearestByDirection(Rectangle r, Direction direction)
-        {
-            if (rectangles.Count == 0)
+            if (rectangles.FirstOrDefault() == default)
                 return null;
             var calculator = GetMinDistanceCalculatorBy(direction);
             var nearestByDirection = rectangles
@@ -33,7 +26,7 @@ namespace TagsCloudVisualization
         {
             switch (direction)
             {
-                case Direction.Left: return (possibleNearest, rectangleForFind) => possibleNearest.Right - rectangleForFind.Left;
+                case Direction.Left: return (possibleNearest, rectangleForFind) => rectangleForFind.Left - possibleNearest.Right;
                 case Direction.Right: return (possibleNearest, rectangleForFind) => possibleNearest.Left - rectangleForFind.Right;
                 case Direction.Top: return (possibleNearest, rectangleForFind) => rectangleForFind.Top - possibleNearest.Bottom;
                 default: return (possibleNearest, rectangleForFind) => possibleNearest.Top - rectangleForFind.Bottom;
