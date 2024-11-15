@@ -92,33 +92,50 @@ namespace TagsCloudVisualization.Tests
         }
 
         [Test]
-        public void PutNextRectangle_ShouldUseCircleLayer_ForChoosePositionForRectangle()
+        public void PutRectangleOnCircleWithoutIntersection_ShouldUseCircleLayer_ForChoosePositionForRectangle()
         {
             var firstRectangleSize = new Size(4, 4);
             var expectedRadius = 7;
+            var storage = new RectangleStorage();
+            layouter = new CircularCloudLayouter(defaultCenter, storage);
             var expected = new Point(defaultCenter.X, defaultCenter.Y - expectedRadius);
-
             layouter.PutNextRectangle(firstRectangleSize);
-            var secondRectangleLocation = layouter.PutNextRectangle(firstRectangleSize).Location;
+            var rPos = layouter.CurrentLayer.CalculateTopLeftRectangleCornerPosition(firstRectangleSize);
+
+            ;
+            var secondRectangleLocation = layouter.PutRectangleOnCircleWithoutIntersection(storage.Add(new (rPos, firstRectangleSize))).Location;
 
             secondRectangleLocation.Should().Be(expected);
         }
 
         [Test]
-        public void PutNextRectangle_ShouldPutRectangleWithoutIntersection_WhenNeedOneMoveForDeleteIntersection()
+        public void PutRectangleOnCircleWithoutIntersection_ShouldPutRectangleWithoutIntersection_WhenNeedOneMoveForDeleteIntersection()
         {
             var firstRectangleSize = new Size(6, 4);
             var expected = new Point(9, 1);
-
+            var storage = new RectangleStorage();
+            layouter = new CircularCloudLayouter(defaultCenter, storage);
+            var sizes = new Size[] { new(4, 4), new(4, 4), new(4, 4), new(4, 4)};
             layouter.PutNextRectangle(firstRectangleSize);
-            layouter.PutNextRectangle(new Size(4, 4));
-            layouter.PutNextRectangle(new Size(4, 4));
-            layouter.PutNextRectangle(new Size(4, 4));
-            layouter.PutNextRectangle(new Size(4, 4));
+            layouter = InsertionsWithoutCompress(4, layouter, sizes, storage);
+            var rectangleWithIntersection =
+                new Rectangle(layouter.CurrentLayer.CalculateTopLeftRectangleCornerPosition(new(3, 3)), new(3, 3));
 
-            var rectangleLocation = layouter.PutNextRectangle(new Size(3, 3)).Location;
+            var rectangleLocation = layouter.PutRectangleOnCircleWithoutIntersection(storage.Add(rectangleWithIntersection)).Location;
 
             rectangleLocation.Should().Be(expected);
+        }
+
+        private CircularCloudLayouter InsertionsWithoutCompress(int insertionsCount, CircularCloudLayouter l, Size[] sizes, RectangleStorage storage)
+        {
+            for (var i = 0; i < insertionsCount; i++)
+            {
+                var pos = l.CurrentLayer.CalculateTopLeftRectangleCornerPosition(sizes[i]);
+                var r = new Rectangle(pos, sizes[i]);
+                l.PutRectangleOnCircleWithoutIntersection(storage.Add(r));
+            }
+
+            return l;
         }
 
         [Test]
@@ -126,7 +143,7 @@ namespace TagsCloudVisualization.Tests
         {
             var firstRectangleSize = new Size(6, 4);
             var secondRectangleSize = new Size(4, 4);
-            var expectedSecondRectangleLocation = new Point(-1, 5);
+            var expectedSecondRectangleLocation = new Point(5, -1);
 
             layouter.PutNextRectangle(firstRectangleSize);
             var second = layouter.PutNextRectangle(secondRectangleSize);
