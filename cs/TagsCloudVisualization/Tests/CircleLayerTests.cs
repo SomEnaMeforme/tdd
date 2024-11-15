@@ -1,4 +1,5 @@
-﻿using FluentAssertions;
+﻿using System.Collections.Generic;
+using FluentAssertions;
 using NUnit.Framework;
 using System.Drawing;
 using System.Linq;
@@ -43,7 +44,7 @@ namespace TagsCloudVisualization.Tests
         
 
         [Test]
-        public void CircleLayer_RadiusNextCircleLayer_ShouldBeIntMinDistanceFromCenterToInsertedRectangle()
+        public void CircleLayer_RadiusNextCircleLayer_ShouldBeIntMinDistanceFromCenterToInsertedRectangles()
         {
             currentLayer = GetLayerAfterFewInsertionsRectangleWithSameSize(currentLayer, 3);
             var nextRectangleLocation = GetCorrectRectangleLocationByExpectedSector(GetSectorByInsertionsCount(4), defaultRectangleSize);
@@ -54,10 +55,10 @@ namespace TagsCloudVisualization.Tests
             currentLayer.Radius.Should().Be(9);
         }
 
-        private CircleLayer GetLayerAfterFewInsertionsRectangleWithSameSize(CircleLayer layer, int insertionsCount)
+        private CircleLayer GetLayerAfterFewInsertionsRectangleWithSameSize(CircleLayer layer, int additionsCount)
         {
-            layer = GetLayerAfterFewInsertionsRectangle(layer, insertionsCount,
-                new Size[insertionsCount].Select(x => defaultRectangleSize).ToArray());
+            layer = GetLayerAfterFewInsertionsRectangle(layer, additionsCount,
+                new Size[additionsCount].Select(x => defaultRectangleSize).ToArray());
             return layer;
         }
 
@@ -106,55 +107,35 @@ namespace TagsCloudVisualization.Tests
             CurrentLayerContainsPoint(bottomLeftCorner).Should().BeTrue();
         }
 
-        [Test]
-        public void GetPositionWithoutIntersection_ReturnCorrectRectanglePosition_WhenFoundIntersectionInTopRightSector()
+        public static IEnumerable<TestCaseData> SimpleIntersectionInSector
         {
-            var rectangleForInsertion = new Rectangle(new Point(5, -1), new Size(5, 1));
-            var intersectedRectangle = new Rectangle(new Point(8, -6), new Size(8, 7));
-            var expected = new Point(9, 1);
-
-            var newPosition = currentLayer.GetRectanglePositionWithoutIntersection(rectangleForInsertion, intersectedRectangle);
-
-            newPosition.Should().Be(expected);
+            get
+            {
+                yield return new TestCaseData(
+                    new Rectangle(new Point(5, -1), new Size(5, 1)), 
+                    new Rectangle(new Point(8, -6), new Size(8, 7)),
+                    new Point(9, 1), 0).SetName("WhenFoundIntersectionInTopRightSector");
+                yield return new TestCaseData(
+                    new Rectangle(new Point(8, 9), new Size(5, 1)),
+                    new Rectangle(new Point(10, 5), new Size(8, 7)),
+                    new Point(5, 10), 1).SetName("WhenFoundIntersectionInBottomRightSector");
+                yield return new TestCaseData(
+                    new Rectangle(new Point(-3, 9), new Size(5, 3)),
+                    new Rectangle(new Point(-7, 8), new Size(8, 7)),
+                    new Point(-5, 5), 2).SetName("WhenFoundIntersectionInBottomLeftSector");
+                yield return new TestCaseData(
+                    new Rectangle(new(-3, -2), new(4, 3)),
+                    new Rectangle(new(-7, 1), new(8, 7)),
+                    new Point(1, -3), 3).SetName("WhenFoundIntersectionInTopLeftSector");
+            }
         }
 
-
-        [Test]
-        public void GetPositionWithoutIntersection_ReturnCorrectRectanglePosition_WhenFoundIntersectionInBottomRightSector()
+        [TestCaseSource("SimpleIntersectionInSector")]
+        public void GetPositionWithoutIntersection_ReturnCorrectRectanglePosition(Rectangle forInsertion, Rectangle intersected, Point expected, int additionsCount)
         {
-            var rectangleForInsertion = new Rectangle(new Point(8, 9), new Size(5, 1));
-            var intersectedRectangle = new Rectangle(new Point(10, 5), new Size(8, 7));
-            currentLayer = GetLayerAfterFewInsertionsRectangleWithSameSize(currentLayer, 1);
-            var expected = new Point(5, 10);
+            currentLayer = GetLayerAfterFewInsertionsRectangleWithSameSize(currentLayer, additionsCount);
 
-            var newPosition = currentLayer.GetRectanglePositionWithoutIntersection(rectangleForInsertion, intersectedRectangle);
-
-            newPosition.Should().Be(expected);
-        }
-
-
-        [Test]
-        public void GetPositionWithoutIntersection_ReturnCorrectRectanglePosition_WhenFoundIntersectionInBottomLeftSector()
-        {
-            var rectangleForInsertion = new Rectangle(new Point(-3, 9), new Size(5, 3));
-            var intersectedRectangle = new Rectangle(new Point(-7, 8), new Size(8, 7));
-            currentLayer = GetLayerAfterFewInsertionsRectangleWithSameSize(currentLayer, 2);
-            var expected = new Point(-5, 5);
-
-            var newPosition = currentLayer.GetRectanglePositionWithoutIntersection(rectangleForInsertion, intersectedRectangle);
-
-            newPosition.Should().Be(expected);
-        }
-
-        [Test]
-        public void GetPositionWithoutIntersection_ReturnCorrectRectanglePosition_WhenFoundIntersectionInTopLeftSector()
-        {
-            var rectangleForInsertion = new Rectangle(new (-3, -2), new (4, 3));
-            var intersectedRectangle = new Rectangle(new (-7, 1), new (8, 7));
-            currentLayer = GetLayerAfterFewInsertionsRectangleWithSameSize(currentLayer, 3);
-            var expected = new Point(1, -3);
-
-            var newPosition = currentLayer.GetRectanglePositionWithoutIntersection(rectangleForInsertion, intersectedRectangle);
+            var newPosition = currentLayer.GetRectanglePositionWithoutIntersection(forInsertion, intersected);
 
             newPosition.Should().Be(expected);
         }
@@ -177,23 +158,40 @@ namespace TagsCloudVisualization.Tests
             nextLayer.Radius.Should().Be(10);
         }
 
-        [Test]
-        public void GetPositionWithoutIntersection_ShouldChangeCornerPositionForSector_WhenMoveRectangleClockwise()
+        public static IEnumerable<TestCaseData> GetDataForIntersectionTests
         {
-            var sizesForInsertions = new Size[]
+            get
             {
-                new (1,1), new(5,8), new (4,4), new (4,4), new(4,4)
-            };
-            var fullLayer = GetLayerAfterFewInsertionsRectangle(currentLayer, sizesForInsertions.Length,
-                sizesForInsertions);
-            var forInsertion = new Rectangle(new (11, 5), new (6,6));
-            var intersected = new Rectangle(new(10, 5),new(5, 8));
+                yield return new TestCaseData(new Size[]
+                        { new(1, 1), new(5, 8), new(4, 4), new(4, 4), new(4, 4) }, 
+                        new Rectangle(new(11, 5), new(6, 6)),
+                        new Rectangle(new(10, 5), new(5, 8)), 
+                        new Point(-1, 12)).SetName("ChangeCornerPositionForSector_WhenMoveRectangleClockwise");
+                yield return new TestCaseData(new Size[]
+                            { new (1,1), new(1,8), new (4,2), new (4, 9), 
+                                new(1,1), new(1,1), new(1,1)},
+                            new Rectangle(new(-10, 2), new(8, 3)),
+                            new Rectangle(new(-4, -4), new (4, 9)),
+                            new Point(5, -7)).SetName("CreateNewCircle_IfNeedMoveRectangleFromLastSector");
+                yield return new TestCaseData(new Size[]
+                    {  new (1,1), new(1,8), new (50, 50), new(1,1), new(1,1), new(1,1)},
+                    new Rectangle(new(4, 10), new(1, 1)),
+                    new Rectangle(new(-50, 10), new(50, 50)),
+                    new Point(-2, 9)).SetName("GetCorrectPosition_WhenRectanglesSidesMatch");
+
+            }
+        }
+
+        [TestCaseSource("GetDataForIntersectionTests")]
+        public void GetPositionWithoutIntersection_Should(Size[] sizes, Rectangle forInsertion, Rectangle intersected, Point expected)
+        {
+            var fullLayer = GetLayerAfterFewInsertionsRectangle(currentLayer, sizes.Length, sizes);
 
             var newPosition = fullLayer.GetRectanglePositionWithoutIntersection(forInsertion, intersected);
 
-            newPosition.Should().Be(new Point(-1, 12));
+            newPosition.Should().Be(expected);
         }
-
+        
         private CircleLayer GetLayerAfterFewInsertionsRectangle(CircleLayer layer, int insertionsCount, Size[] sizes)
         {
             for (var i = 1; i <= insertionsCount; i++)
@@ -205,44 +203,5 @@ namespace TagsCloudVisualization.Tests
             return layer;
         }
 
-
-        [Test]
-        public void GetPositionWithoutIntersection_ShouldCreateNewCircle_IfNeedMoveRectangleFromLastSector()
-        {
-            var intersectedSize = new Size(4, 9);
-            var sizesForInsertions = new []
-            {
-                new (1,1), new(1,8), new (4,2), intersectedSize, 
-                new(1,1), new(1,1), new(1,1)
-            };
-            var fullLayer = GetLayerAfterFewInsertionsRectangle(currentLayer, sizesForInsertions.Length,
-                sizesForInsertions);
-            var forInsertion = new Rectangle(new(-10,2), new(8, 3));
-            var intersected = new Rectangle(new(-4, -4), intersectedSize);
-
-            var newPosition = fullLayer.GetRectanglePositionWithoutIntersection(forInsertion, intersected);
-
-            newPosition.Should().Be(new Point(5, -7));
-        }
-
-        [Test]
-        public void GetPositionWithoutIntersection_WhenOneRectangleOnSimmetricalAxis()
-        {
-            var intersectedSize = new Size(50, 50);
-            var sizesForInsertions = new[]
-            {
-                new (1,1), new(1,8), intersectedSize, new(1,1), new(1,1), new(1,1)
-            };
-            var fullLayer = GetLayerAfterFewInsertionsRectangle(currentLayer, sizesForInsertions.Length,
-                sizesForInsertions);
-            var forInsertion = new Rectangle(new(4, 10), new(1, 1));
-            var intersected = new Rectangle(new(-50, 10), intersectedSize);
-
-            forInsertion.Location = fullLayer.GetRectanglePositionWithoutIntersection(forInsertion, intersected);
-
-
-            forInsertion.IntersectsWith(intersected).Should().BeFalse();
-            forInsertion.Location.Should().Be(new Point(-2, 9));
-        }
     }
 }
