@@ -22,7 +22,7 @@ namespace TagsCloudVisualization
             return nearestByDirection.Count > 0 ? nearestByDirection.MinBy(el => el.Distance).CurrentEl : null;
         }
 
-        private Func<Rectangle, Rectangle, int> GetMinDistanceCalculatorBy(Direction direction)
+        public Func<Rectangle, Rectangle, int> GetMinDistanceCalculatorBy(Direction direction)
         {
             switch (direction)
             {
