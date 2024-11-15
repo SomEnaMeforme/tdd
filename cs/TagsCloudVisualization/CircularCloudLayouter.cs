@@ -1,4 +1,7 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
 
 namespace TagsCloudVisualization;
 
@@ -35,6 +38,7 @@ public class CircularCloudLayouter
         {
             firstRectanglePosition = CurrentLayer.CalculateTopLeftRectangleCornerPosition(rectangleSize);
         }
+
         var id = SaveRectangle(firstRectanglePosition, rectangleSize);
         var rectangleWithOptimalPosition = OptimiseRectanglePosition(id, isFirstRectangle);
         return rectangleWithOptimalPosition;
@@ -89,8 +93,10 @@ public class CircularCloudLayouter
     {
         foreach (var moveInfo in t)
         {
-            var factorForDistanceByX = moveInfo.Direction == Direction.Left ? -1 : moveInfo.Direction == Direction.Right ? 1 : 0;
-            var factorForDistanceByY = moveInfo.Direction == Direction.Top ? -1 : moveInfo.Direction == Direction.Bottom ? 1 : 0;
+            var factorForDistanceByX = moveInfo.Direction == Direction.Left ? -1 :
+                moveInfo.Direction == Direction.Right ? 1 : 0;
+            var factorForDistanceByY = moveInfo.Direction == Direction.Top ? -1 :
+                moveInfo.Direction == Direction.Bottom ? 1 : 0;
             p.X += moveInfo.Distance * factorForDistanceByX;
             p.Y += moveInfo.Distance * factorForDistanceByY;
         }

@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Text;
 using NUnit.Framework;
 using FluentAssertions;
-using System.Reflection;
-using static System.Collections.Specialized.BitVector32;
 
 namespace TagsCloudVisualization.Tests
 {
@@ -112,10 +107,10 @@ namespace TagsCloudVisualization.Tests
         public void PutRectangleOnCircleWithoutIntersection_ShouldPutRectangleWithoutIntersection_WhenNeedOneMoveForDeleteIntersection()
         {
             var firstRectangleSize = new Size(6, 4);
-            var expected = new Point(9, 1);
+            var expected = new Point(14, 1);
             var storage = new RectangleStorage();
             layouter = new CircularCloudLayouter(defaultCenter, storage);
-            var sizes = new Size[] { new(4, 4), new(4, 4), new(4, 4), new(4, 4)};
+            var sizes = new Size[] { new(4, 7), new(4, 4), new(4, 4), new(4, 4)};
             layouter.PutNextRectangle(firstRectangleSize);
             layouter = InsertionsWithoutCompress(4, layouter, sizes, storage);
             var rectangleWithIntersection =
