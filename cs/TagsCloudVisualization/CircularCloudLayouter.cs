@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,7 +10,7 @@ namespace TagsCloudVisualization
 {
     public class CircularCloudLayouter
     {
-        private List<Rectangle> rectanglesLocation = new ();
+        private readonly RectangleStorage storage = new ();
         private readonly Point center;
         private BruteForceNearestFinder nearestFinder;
 
@@ -23,28 +24,49 @@ namespace TagsCloudVisualization
         public Rectangle PutNextRectangle(Size rectangleSize)
         {
             ValidateRectangleSize(rectangleSize);
-            Rectangle resultRectangle;
-            if (IsFirstRectangle())
+            Point firstRectanglePosition;
+            var isFirstRectangle = IsFirstRectangle();
+            if (isFirstRectangle)
             {
                 CreateFirstLayer(rectangleSize);
-                resultRectangle = PutRectangleToCenter(rectangleSize);
+                firstRectanglePosition = PutRectangleToCenter(rectangleSize);
             }
             else
             {
-                var possiblePosition = CurrentLayer.CalculateTopLeftRectangleCornerPosition(rectangleSize);
-                resultRectangle = new Rectangle(possiblePosition, rectangleSize);
-                var intersected = GetRectangleIntersection(resultRectangle);
-                while (intersected != new Rectangle())
-                {
-                    possiblePosition =
-                        CurrentLayer.GetRectanglePositionWithoutIntersection(resultRectangle, intersected.Value);
-                    resultRectangle = new Rectangle(possiblePosition, rectangleSize);
-                    intersected = GetRectangleIntersection(resultRectangle);
-                }
+                firstRectanglePosition = CurrentLayer.CalculateTopLeftRectangleCornerPosition(rectangleSize);
             }
-            OnSuccessInsertion(resultRectangle);
-            return resultRectangle;
+            var id = SaveRectangle(firstRectanglePosition, rectangleSize);
+            var rectangleWithOptimalPosition = OptimiseRectanglePosition(id, isFirstRectangle);
+            return rectangleWithOptimalPosition;
         }
+
+        public Rectangle OptimiseRectanglePosition(int id, bool isFirstRectangle)
+        {
+            if (isFirstRectangle) return storage.GetById(id);
+            return PutRectangleOnCircleWithoutIntersection(id);
+        }
+
+        private int SaveRectangle(Point firstLocation, Size rectangleSize)
+        {
+            var id = storage.Add(new Rectangle(firstLocation, rectangleSize));
+            return id;
+        }
+
+        public Rectangle PutRectangleOnCircleWithoutIntersection(int id)
+        {
+            var r = storage.GetById(id);
+            var intersected = GetRectangleIntersection(r);
+            while (intersected != new Rectangle())
+            {
+                var possiblePosition =
+                    CurrentLayer.GetRectanglePositionWithoutIntersection(r, intersected.Value);
+                r = new Rectangle(possiblePosition, r.Size);
+                intersected = GetRectangleIntersection(r);
+            }
+            CurrentLayer.OnSuccessInsertRectangle(id);
+            return r;
+        }
+
         private void ValidateRectangleSize(Size s)
         {
             if (s.Width <= 0 || s.Height <= 0)
@@ -53,58 +75,46 @@ namespace TagsCloudVisualization
             }
         }
 
-        private void OnSuccessInsertion(Rectangle r)
-        {
-            rectanglesLocation.Add(r);
-            nearestFinder.Insert(r);
-            if (IsNotFirstInsertion())
-                CurrentLayer.OnSuccessInsertRectangle(r);
-        }
-
         private Rectangle? GetRectangleIntersection(Rectangle forInsertion)
         {
-            return rectanglesLocation
-                .FirstOrDefault(forInsertion.IntersectsWith);
+            return storage.GetAll()
+                .FirstOrDefault(r => forInsertion.IntersectsWith(r) && forInsertion != r);
         }
 
         private Rectangle?[] GetNearestByAllDirectionsFor(Rectangle r)
         {
+            var rectangles = this.storage.GetAll();
             return new []
             {
-                nearestFinder.FindNearestByDirection(r, Direction.Bottom),
-                nearestFinder.FindNearestByDirection(r, Direction.Top),
-                nearestFinder.FindNearestByDirection(r, Direction.Left),
-                nearestFinder.FindNearestByDirection(r, Direction.Right)
+                nearestFinder.FindNearestByDirection(r, Direction.Bottom, rectangles),
+                nearestFinder.FindNearestByDirection(r, Direction.Top, rectangles),
+                nearestFinder.FindNearestByDirection(r, Direction.Left, rectangles),
+                nearestFinder.FindNearestByDirection(r, Direction.Right, rectangles)
             };
         }
 
         private void CreateFirstLayer(Size firstRectangle)
         {
             var radius = Math.Ceiling(Math.Sqrt(firstRectangle.Width* firstRectangle.Width + firstRectangle.Height* firstRectangle.Height) / 2.0);
-            CurrentLayer = new CircleLayer(center, (int)radius);
+            CurrentLayer = new CircleLayer(center, (int)radius, storage);
         }
 
-        private Rectangle PutRectangleToCenter(Size rectangleSize)
+        private Point PutRectangleToCenter(Size rectangleSize)
         {
             var rectangleX = center.X - rectangleSize.Width / 2;
             var rectangleY = center.Y - rectangleSize.Height / 2;
 
-            return new Rectangle(new Point(rectangleX, rectangleY), rectangleSize);
+            return new Point(rectangleX, rectangleY);
         }
         
         private bool IsFirstRectangle()
         {
-            return rectanglesLocation.Count == 0;
-        }
-
-        private bool IsNotFirstInsertion()
-        {
-            return rectanglesLocation.Count > 1;
+            return storage.GetAll().FirstOrDefault() == default;
         }
 
         public IEnumerable<Rectangle> GetRectangles()
         {
-            foreach (var rectangle in rectanglesLocation)
+            foreach (var rectangle in storage.GetAll())
             {
                 yield return rectangle;
             }

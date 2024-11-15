@@ -16,20 +16,21 @@ public class CircleLayer
     public int Radius { get; private set; }
 
     private Sector currentSector;
-    private readonly List<Rectangle> layerRectangles;
+    private readonly RectangleStorage storage;
+    private readonly List<int> layerRectangles = new();
 
-    public CircleLayer(Point center, int radius)
+    public CircleLayer(Point center, int radius, RectangleStorage storage)
     {
         Center = center;
         Radius = radius;
         currentSector = Sector.Top_Right;
-        layerRectangles = new List<Rectangle>();
+        this.storage = storage;
     }
 
-    public CircleLayer OnSuccessInsertRectangle(Rectangle inserted)
+    public CircleLayer OnSuccessInsertRectangle(int addedRectangleId)
     {
         currentSector = GetNextClockwiseSector();
-        layerRectangles.Add(inserted);
+        layerRectangles.Add(addedRectangleId);
         if (ShouldCreateNewCircle()) 
             return CreateNextLayer();
         return this;
@@ -47,14 +48,14 @@ public class CircleLayer
 
     private CircleLayer CreateNextLayer()
     {
-        var nextLayer = new CircleLayer(Center, CalculateRadiusForNextLayer());
+        var nextLayer = new CircleLayer(Center, CalculateRadiusForNextLayer(), storage);
         return nextLayer;
     }
 
     private int CalculateRadiusForNextLayer()
     {
         var prevSector = Sector.Top_Right;
-        return layerRectangles.Select(r => CalculateDistanceBetweenCenterAndRectangleBySector(r, prevSector++)).Min();
+        return layerRectangles.Select(id => CalculateDistanceBetweenCenterAndRectangleBySector(storage.GetById(id), prevSector++)).Min();
     }
 
     private int CalculateDistanceBetweenCenterAndRectangleBySector(Rectangle r, Sector s)

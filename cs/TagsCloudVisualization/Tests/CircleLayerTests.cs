@@ -9,12 +9,14 @@ namespace TagsCloudVisualization.Tests
     {
         private CircleLayer currentLayer;
         private Size defaultRectangleSize;
+        private RectangleStorage storage;
         [SetUp]
         public void SetUp()
         {
             var startRadius = 5;
             var center = new Point(5, 5);
-            currentLayer = new CircleLayer(center, startRadius);
+            storage = new RectangleStorage();
+            currentLayer = new CircleLayer(center, startRadius, storage);
             defaultRectangleSize = new Size(3, 4);
         }
 
@@ -42,8 +44,9 @@ namespace TagsCloudVisualization.Tests
         public void CircleLayer_ShouldCreateNewLayer_AfterInsertionsOnAllSectors()
         {
             currentLayer = GetLayerAfterFewInsertionsRectangleWithSameSize(currentLayer, 3);
+            var insertedRectangleId = storage.Add(new Rectangle(new Point(0, 0), defaultRectangleSize));
 
-            var nextLayer = currentLayer.OnSuccessInsertRectangle(new Rectangle(new Point(0, 0), defaultRectangleSize));
+            var nextLayer = currentLayer.OnSuccessInsertRectangle(insertedRectangleId);
 
             nextLayer.Should().NotBeSameAs(currentLayer);
         }
@@ -53,8 +56,9 @@ namespace TagsCloudVisualization.Tests
         {
             currentLayer = GetLayerAfterFewInsertionsRectangleWithSameSize(currentLayer, 3);
             var nextRectangleLocation = GetCorrectRectangleLocationByExpectedSector(GetSectorByInsertionsCount(4), defaultRectangleSize);
+            var insertedRectangleId = storage.Add(new Rectangle(nextRectangleLocation, new Size(2, 2)));
 
-            var nextLayer = currentLayer.OnSuccessInsertRectangle(new Rectangle(nextRectangleLocation, new Size(2,2)));
+            var nextLayer = currentLayer.OnSuccessInsertRectangle(insertedRectangleId);
 
             nextLayer.Radius.Should().Be(9);
         }
@@ -205,7 +209,7 @@ namespace TagsCloudVisualization.Tests
             {
                 var location = GetCorrectRectangleLocationByExpectedSector(GetSectorByInsertionsCount(i), sizes[i - 1]);
                 var rectangleForInsert = new Rectangle(location, sizes[i - 1]);
-                layer = layer.OnSuccessInsertRectangle(rectangleForInsert);
+                layer = layer.OnSuccessInsertRectangle(storage.Add(rectangleForInsert));
             }
             return layer;
         }

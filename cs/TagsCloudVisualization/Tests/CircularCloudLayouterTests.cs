@@ -120,5 +120,18 @@ namespace TagsCloudVisualization.Tests
 
             rectangleLocation.Should().Be(expected);
         }
+
+        [Test]
+        public void PutNextRectangle_ShouldTryMoveRectangleCloserToCenter_WhenItPossible()
+        {
+            var firstRectangleSize = new Size(6, 4);
+            var secondRectangleSize = new Size(4, 4);
+            var expectedSecondRectangleLocation = new Point(-1, 5);
+
+            layouter.PutNextRectangle(firstRectangleSize);
+            var second = layouter.PutNextRectangle(secondRectangleSize);
+
+            second.Location.Should().Be(expectedSecondRectangleLocation);
+        }
     }
 }
