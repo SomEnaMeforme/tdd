@@ -60,7 +60,7 @@ namespace TagsCloudVisualization
             {
                 var possiblePosition =
                     CurrentLayer.GetRectanglePositionWithoutIntersection(r, intersected.Value);
-                r = new Rectangle(possiblePosition, r.Size);
+                r.Location = possiblePosition;
                 intersected = GetRectangleIntersection(r);
             }
             CurrentLayer.OnSuccessInsertRectangle(id);
