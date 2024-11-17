@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Drawing;
+using System.Linq;
 using NUnit.Framework;
 using FluentAssertions;
+using NUnit.Framework.Interfaces;
+using System.IO;
+using System.Reflection;
 
 namespace TagsCloudVisualization.Tests
 {
@@ -9,12 +13,31 @@ namespace TagsCloudVisualization.Tests
     {
         private CircularCloudLayouter layouter;
         private Point defaultCenter;
+        private RectangleStorage storage;
 
         [SetUp]
         public void SetUp()
         {
             defaultCenter = new Point(5, 5);
-            layouter = new CircularCloudLayouter(defaultCenter);
+            storage = new RectangleStorage();
+            layouter = new CircularCloudLayouter(defaultCenter, storage);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            if (TestContext.CurrentContext.Result.Outcome.Status == TestStatus.Failed)
+            {
+                var testObj = TestContext.CurrentContext.Test.Parent.Fixture as CircularCloudLayouterTests;
+                var info = typeof(CircularCloudLayouterTests)
+                    .GetField("storage", BindingFlags.NonPublic | BindingFlags.Instance);
+                var st = info.GetValue(testObj);
+
+                var visualizator = new CircularCloudVisualization(st as RectangleStorage, new Size(1000, 1000));
+                var pathFile = Path.Combine(Directory.GetCurrentDirectory(), TestContext.CurrentContext.Test.Name);
+                visualizator.CreateImage(pathFile);
+                TestContext.Out.WriteLine($"Tag cloud visualization saved to file {pathFile}");
+            }
         }
 
         [TestCase(0, 4, TestName = "WhenWidthZero")]
@@ -74,7 +97,6 @@ namespace TagsCloudVisualization.Tests
         {
             var firstRectangleSize = new Size(4, 4);
             var expectedRadius = 7;
-            var storage = new RectangleStorage();
             layouter = new CircularCloudLayouter(defaultCenter, storage);
             var expected = new Point(defaultCenter.X, defaultCenter.Y - expectedRadius);
             layouter.PutNextRectangle(firstRectangleSize);
@@ -91,7 +113,6 @@ namespace TagsCloudVisualization.Tests
         {
             var firstRectangleSize = new Size(6, 4);
             var expected = new Point(14, 1);
-            var storage = new RectangleStorage();
             layouter = new CircularCloudLayouter(defaultCenter, storage);
             var sizes = new Size[] { new(4, 7), new(4, 4), new(4, 4), new(4, 4)};
             layouter.PutNextRectangle(firstRectangleSize);

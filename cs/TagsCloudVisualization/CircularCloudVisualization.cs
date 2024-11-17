@@ -18,16 +18,18 @@ namespace TagsCloudVisualization
         private readonly Color RECTANGLE_COLOR = Color.DarkBlue;
         private readonly Size ImageSize;
         private RectangleStorage rectangleStorage;
+        private int sizeFactor;
 
-        public CircularCloudVisualization(RectangleStorage rectangles, Size size)
+        public CircularCloudVisualization(RectangleStorage rectangles, Size imageSize)
         {
             rectangleStorage = rectangles;
-            ImageSize = size;
+            ImageSize = imageSize;
+            this.sizeFactor = sizeFactor;
         }
 
-        public void CreateImage()
+        public void CreateImage(string file = null)
         {
-            var filePath = Path.Combine(Path.GetTempPath(), "testImage1010.png");
+            var filePath = file ?? Path.Combine(Path.GetTempPath(), "testImage1010.png");
             using (var image = new Bitmap(ImageSize.Width, ImageSize.Height))
             {
                 using (Graphics graphics = Graphics.FromImage(image))
@@ -35,7 +37,7 @@ namespace TagsCloudVisualization
                     graphics.Clear(BACKGROUND_COLOR);
                     DrawGrid(graphics);
                     Pen pen = new Pen(RECTANGLE_COLOR);
-                    var rectangles = rectangleStorage.GetAll();
+                    var rectangles = NormalizeSizes(rectangleStorage.GetAll());
                     graphics.DrawRectangle(new Pen(Color.Brown),rectangles.First());
                     graphics.DrawRectangles(pen, rectangles.Skip(1).ToArray());
                 }
@@ -95,6 +97,21 @@ namespace TagsCloudVisualization
                 default:
                     return Color.DodgerBlue;
             }
+        }
+
+        private Rectangle[] NormalizeSizes(IEnumerable<Rectangle> source)
+        {
+            double XLength = source.Max(r => r.Right) - source.Min(r => r.Left);
+            double YLength = source.Max(r => r.Bottom) - source.Min(r => r.Top);
+            var boundShift = 10;
+            var factorX = ImageSize.Width > XLength 
+                ? (int)Math.Floor((ImageSize.Width - boundShift) / XLength) 
+                : 1;
+            var factorY = ImageSize.Height> YLength
+                ? (int)Math.Floor((ImageSize.Height - boundShift) / YLength)
+                : 1;
+            return source.Select(r => new Rectangle(new Point(r.X * factorX,r.Y * factorY),  
+                new Size(r.Width * factorX, r.Height * factorY))).ToArray();
         }
     }
 }
