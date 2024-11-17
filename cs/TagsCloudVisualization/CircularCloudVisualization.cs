@@ -74,7 +74,7 @@ namespace TagsCloudVisualization
                         var r = layouter.PutNextRectangle(sizes[i]);
                         var currentFileName = $"{startName}{i}{extension}";
                         graphics.DrawRectangle(new Pen(GetColorBySector(layouter.CurrentLayer.CurrentSector)), r);
-                        var filePath = Path.Combine(@"C:\Users\Resh\Desktop\ShporaHomeworks\TagCloud1\tdd\cs\TagsCloudVisualization\Images", currentFileName);
+                        var filePath = Path.Combine(Path.GetTempPath(), currentFileName);
                         image.Save(filePath, ImageFormat.Png);
                     }
                 }
