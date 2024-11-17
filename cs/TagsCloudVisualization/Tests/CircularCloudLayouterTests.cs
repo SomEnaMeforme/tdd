@@ -7,7 +7,6 @@ namespace TagsCloudVisualization.Tests
 {
     public class CircularCloudLayouterTests
     {
-
         private CircularCloudLayouter layouter;
         private Point defaultCenter;
 
@@ -34,13 +33,6 @@ namespace TagsCloudVisualization.Tests
         }
 
         [Test]
-        public void GetRectangles_ShouldBeEmpty_BeforePutAnyRectangles()
-        {
-            layouter.GetRectangles()
-                .Should().BeEmpty();
-        }
-
-        [Test]
         public void PutNextRectangle_ShouldAddRectangleToCenter_WhenRectangleFirst()
         {
             var firstRectangleSize = new Size(6, 4);
@@ -56,6 +48,8 @@ namespace TagsCloudVisualization.Tests
         public void PutNextRectangle_ShouldCreateFirstCircleLayer_AfterPutFirstRectangle()
         {
             var firstRectangleSize = new Size(6, 4);
+
+            layouter.CurrentLayer.Should().BeNull();
 
             layouter.PutNextRectangle(firstRectangleSize);
 
@@ -76,17 +70,6 @@ namespace TagsCloudVisualization.Tests
         }
 
         [Test]
-        public void PutNextRectangle_ShouldAddRectangleToLayouter_AfterPut()
-        {
-            var firstRectangleSize = new Size(4, 4);
-
-            layouter.PutNextRectangle(firstRectangleSize);
-
-            layouter.GetRectangles()
-                .Should().NotBeEmpty().And.HaveCount(1);
-        }
-
-        [Test]
         public void PutRectangleOnCircleWithoutIntersection_ShouldUseCircleLayer_ForChoosePositionForRectangle()
         {
             var firstRectangleSize = new Size(4, 4);
@@ -104,7 +87,7 @@ namespace TagsCloudVisualization.Tests
         }
 
         [Test]
-        public void PutRectangleOnCircleWithoutIntersection_ShouldPutRectangleWithoutIntersection_WhenNeedOneMoveForDeleteIntersection()
+        public void PutRectangleOnCircleWithoutIntersection_ShouldPutRectangleWithoutIntersection()
         {
             var firstRectangleSize = new Size(6, 4);
             var expected = new Point(14, 1);

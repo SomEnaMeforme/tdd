@@ -61,10 +61,10 @@ public class CircularCloudLayouter
     {
         var r = storage.GetById(id);
         var intersected = GetRectangleIntersection(r);
-        while (intersected != new Rectangle())
+
+        while (RectangleHasIntersection(intersected))
         {
-            var possiblePosition =
-                CurrentLayer.GetRectanglePositionWithoutIntersection(r, intersected.Value);
+            var possiblePosition = CurrentLayer.GetRectanglePositionWithoutIntersection(r, intersected.Value);
             r.Location = possiblePosition;
             intersected = GetRectangleIntersection(r);
         }
@@ -72,6 +72,12 @@ public class CircularCloudLayouter
         CurrentLayer.OnSuccessInsertRectangle(id);
         return r;
     }
+
+    private bool RectangleHasIntersection(Rectangle? intersected)
+    {
+        return intersected != default && intersected.Value != default;
+    }
+
 
     public Rectangle TryMoveRectangleCloserToCenter(int id)
     {
@@ -83,7 +89,7 @@ public class CircularCloudLayouter
             .Where(tuple => tuple.Nearest != null)
             .Select(t => (
                 DistanceCalculator: nearestFinder.GetMinDistanceCalculatorBy(t.Direction), t.Nearest, t.Direction))
-            .Select(t => (Distance: t.DistanceCalculator((Rectangle)t.Nearest, rectangleForMoving), t.Direction))
+            .Select(t => (Distance: t.DistanceCalculator(t.Nearest.Value, rectangleForMoving), t.Direction))
             .ToArray();
         rectangleForMoving.Location = MoveByDirections(rectangleForMoving.Location, distancesForMove);
         return rectangleForMoving;
@@ -126,18 +132,6 @@ public class CircularCloudLayouter
             .FirstOrDefault(r => forInsertion.IntersectsWith(r) && forInsertion != r);
     }
 
-    private Rectangle?[] GetNearestByAllDirectionsFor(Rectangle r)
-    {
-        var rectangles = storage.GetAll();
-        return new[]
-        {
-            nearestFinder.FindNearestByDirection(r, Direction.Bottom, rectangles),
-            nearestFinder.FindNearestByDirection(r, Direction.Top, rectangles),
-            nearestFinder.FindNearestByDirection(r, Direction.Left, rectangles),
-            nearestFinder.FindNearestByDirection(r, Direction.Right, rectangles)
-        };
-    }
-
     private void CreateFirstLayer(Size firstRectangle)
     {
         var radius = Math.Ceiling(Math.Sqrt(firstRectangle.Width * firstRectangle.Width +
@@ -156,10 +150,5 @@ public class CircularCloudLayouter
     private bool IsFirstRectangle()
     {
         return storage.GetAll().FirstOrDefault() == default;
-    }
-
-    public IEnumerable<Rectangle> GetRectangles()
-    {
-        foreach (var rectangle in storage.GetAll()) yield return rectangle;
     }
 }
