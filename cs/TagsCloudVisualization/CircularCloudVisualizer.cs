@@ -44,7 +44,7 @@ namespace TagsCloudVisualization
         private void SaveImage(Bitmap image, string? filePath = null)
         {
             var rnd = new Random();
-            filePath = filePath ?? Path.Combine(Path.GetTempPath(), $"testImage{rnd.Next()}.png");
+            filePath ??= Path.Combine(Path.GetTempPath(), $"testImage{rnd.Next()}.png");
             image.Save(filePath, ImageFormat.Png);
         }
 
@@ -52,11 +52,11 @@ namespace TagsCloudVisualization
         {
             var sourceToArray = source.ToArray();
 
-            var XLength = sourceToArray.Max(r => r.Right) - sourceToArray.Min(r => r.Left);
-            var YLength = sourceToArray.Max(r => r.Bottom) - sourceToArray.Min(r => r.Top);
+            var xLength = sourceToArray.Max(r => r.Right) - sourceToArray.Min(r => r.Left);
+            var yLength = sourceToArray.Max(r => r.Bottom) - sourceToArray.Min(r => r.Top);
 
-            var factorX = GetNormalizeFactorByAxis(imageSize.Width, XLength);
-            var factorY = GetNormalizeFactorByAxis(imageSize.Height, YLength);
+            var factorX = GetNormalizeFactorByAxis(imageSize.Width, xLength);
+            var factorY = GetNormalizeFactorByAxis(imageSize.Height, yLength);
 
             return sourceToArray.Select(r => new Rectangle(
                     new Point(r.X * factorX, r.Y * factorY),
@@ -64,7 +64,7 @@ namespace TagsCloudVisualization
                 .ToArray();
         }
 
-        private int GetNormalizeFactorByAxis(int imageSizeOnAxis, int rectanglesSizeOnAxis)
+        private static int GetNormalizeFactorByAxis(int imageSizeOnAxis, int rectanglesSizeOnAxis)
         {
             const int boundShift = 10;
             double imageSizeOnAxisWithShiftForBounds = imageSizeOnAxis - boundShift;

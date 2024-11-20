@@ -11,36 +11,27 @@ public class CircularCloudLayouter
     private readonly RectangleStorage storage = new();
     private readonly BruteForceNearestFinder nearestFinder;
 
+    public CircleLayer CurrentLayer { get; }
+
     public CircularCloudLayouter(Point center)
     {
         this.center = center;
         nearestFinder = new BruteForceNearestFinder();
+        CurrentLayer = new(center, storage);
     }
 
     internal CircularCloudLayouter(Point center, RectangleStorage storage) : this(center)
     {
         this.storage = storage;
+        CurrentLayer = new(center, storage);
     }
-
-    public CircleLayer CurrentLayer { get; private set; }
 
     public Rectangle PutNextRectangle(Size rectangleSize)
     {
         ValidateRectangleSize(rectangleSize);
-        Point firstRectanglePosition;
-        var isFirstRectangle = IsFirstRectangle();
-        if (isFirstRectangle)
-        {
-            CreateFirstLayer(rectangleSize);
-            firstRectanglePosition = PutRectangleToCenter(rectangleSize);
-        }
-        else
-        {
-            firstRectanglePosition = CurrentLayer.CalculateTopLeftRectangleCornerPosition(rectangleSize);
-        }
-
+        var firstRectanglePosition = CurrentLayer.CalculateTopLeftRectangleCornerPosition(rectangleSize);
         var id = SaveRectangle(firstRectanglePosition, rectangleSize);
-        var rectangleWithOptimalPosition = OptimiseRectanglePosition(id, isFirstRectangle);
+        var rectangleWithOptimalPosition = OptimiseRectanglePosition(id);
         return rectangleWithOptimalPosition;
     }
 
@@ -50,105 +41,88 @@ public class CircularCloudLayouter
         return id;
     }
 
-    public Rectangle OptimiseRectanglePosition(int id, bool isFirstRectangle)
+    private Rectangle OptimiseRectanglePosition(int id)
     {
-        if (isFirstRectangle) return storage.GetById(id);
         PutRectangleOnCircleWithoutIntersection(id);
         return TryMoveRectangleCloserToCenter(id);
     }
 
     public Rectangle PutRectangleOnCircleWithoutIntersection(int id)
     {
-        var r = storage.GetById(id);
-        var intersected = GetRectangleIntersection(r);
+        var forOptimise = storage.GetById(id);
+        var intersected = GetRectangleIntersection(forOptimise);
 
-        while (RectangleHasIntersection(intersected))
+        while (intersected != default && intersected.Value != default)
         {
-            var possiblePosition = CurrentLayer.GetRectanglePositionWithoutIntersection(r, intersected.Value);
-            r.Location = possiblePosition;
-            intersected = GetRectangleIntersection(r);
+            var possiblePosition = CurrentLayer.GetRectanglePositionWithoutIntersection(forOptimise, intersected.Value);
+            forOptimise.Location = possiblePosition;
+            intersected = GetRectangleIntersection(forOptimise);
         }
 
         CurrentLayer.OnSuccessInsertRectangle(id);
-        return r;
+        return forOptimise;
     }
 
-    private bool RectangleHasIntersection(Rectangle? intersected)
-    {
-        return intersected != default && intersected.Value != default;
-    }
-
-
-    public Rectangle TryMoveRectangleCloserToCenter(int id)
+    internal Rectangle TryMoveRectangleCloserToCenter(int id)
     {
         var rectangleForMoving = storage.GetById(id);
-        var directionsForMoving = GetDirectionsForMovingToCenter(rectangleForMoving);
-        var distancesForMove = directionsForMoving
-            .Select(d => (Nearest: nearestFinder.FindNearestByDirection(rectangleForMoving, d, storage.GetAll()),
-                Direction: d))
-            .Where(tuple => tuple.Nearest != null)
-            .Select(t => (
-                DistanceCalculator: nearestFinder.GetMinDistanceCalculatorBy(t.Direction), t.Nearest, t.Direction))
-            .Select(t => (Distance: t.DistanceCalculator(t.Nearest.Value, rectangleForMoving), t.Direction))
-            .ToArray();
-        rectangleForMoving.Location = MoveByDirections(rectangleForMoving.Location, distancesForMove);
+        var toCenter = GetDirectionsForMovingToCenter(rectangleForMoving);
+        foreach (var direction in toCenter)
+        {
+            rectangleForMoving.Location = MoveToCenterByDirection(rectangleForMoving, direction);
+        }
         return rectangleForMoving;
     }
 
-    private Point MoveByDirections(Point p, (int Distance, Direction Direction)[] t)
-    {
-        foreach (var moveInfo in t)
-        {
-            var factorForDistanceByX = moveInfo.Direction == Direction.Left ? -1 :
-                moveInfo.Direction == Direction.Right ? 1 : 0;
-            var factorForDistanceByY = moveInfo.Direction == Direction.Top ? -1 :
-                moveInfo.Direction == Direction.Bottom ? 1 : 0;
-            p.X += moveInfo.Distance * factorForDistanceByX;
-            p.Y += moveInfo.Distance * factorForDistanceByY;
-        }
 
-        return p;
+    private Point MoveToCenterByDirection(Rectangle forMoving, Direction toCenter)
+    {
+        var nearest = nearestFinder.FindNearestByDirection(forMoving, toCenter, storage.GetAll());
+        if (nearest == null) return forMoving.Location;
+        var distanceCalculator = nearestFinder.GetMinDistanceCalculatorBy(toCenter);
+        var distanceForMove = distanceCalculator(nearest.Value, forMoving);
+        return MoveByDirection(forMoving.Location, distanceForMove, toCenter);
     }
 
-    private List<Direction> GetDirectionsForMovingToCenter(Rectangle r)
+    private Point MoveByDirection(Point forMoving, int distance, Direction toCenter)
+    {
+        var factorForDistanceByX = toCenter switch
+        {
+            Direction.Left => -1,
+            Direction.Right => 1,
+            _ => 0
+        };
+        var factorForDistanceByY = toCenter switch
+        {
+            Direction.Top => -1,
+            Direction.Bottom => 1,
+            _ => 0
+        };
+        forMoving.X += distance * factorForDistanceByX;
+        forMoving.Y += distance * factorForDistanceByY;
+
+        return forMoving;
+    }
+
+    private List<Direction> GetDirectionsForMovingToCenter(Rectangle forMoving)
     {
         var directions = new List<Direction>();
-        if (r.Bottom < center.Y) directions.Add(Direction.Bottom);
-        if (r.Left > center.X) directions.Add(Direction.Left);
-        if (r.Right < center.X) directions.Add(Direction.Right);
-        if (r.Top > center.Y) directions.Add(Direction.Top);
+        if (forMoving.Bottom < center.Y) directions.Add(Direction.Bottom);
+        if (forMoving.Left > center.X) directions.Add(Direction.Left);
+        if (forMoving.Right < center.X) directions.Add(Direction.Right);
+        if (forMoving.Top > center.Y) directions.Add(Direction.Top);
         return directions;
     }
 
-    private void ValidateRectangleSize(Size s)
+    private void ValidateRectangleSize(Size forInsertion)
     {
-        if (s.Width <= 0 || s.Height <= 0)
-            throw new ArgumentException($"Rectangle has incorrect size: width = {s.Width}, height = {s.Height}");
+        if (forInsertion.Width <= 0 || forInsertion.Height <= 0)
+            throw new ArgumentException($"Rectangle has incorrect size: width = {forInsertion.Width}, height = {forInsertion.Height}");
     }
 
     private Rectangle? GetRectangleIntersection(Rectangle forInsertion)
     {
         return storage.GetAll()
             .FirstOrDefault(r => forInsertion.IntersectsWith(r) && forInsertion != r);
-    }
-
-    private void CreateFirstLayer(Size firstRectangle)
-    {
-        var radius = Math.Ceiling(Math.Sqrt(firstRectangle.Width * firstRectangle.Width +
-                                            firstRectangle.Height * firstRectangle.Height) / 2.0);
-        CurrentLayer = new CircleLayer(center, (int)radius, storage);
-    }
-
-    private Point PutRectangleToCenter(Size rectangleSize)
-    {
-        var rectangleX = center.X - rectangleSize.Width / 2;
-        var rectangleY = center.Y - rectangleSize.Height / 2;
-
-        return new Point(rectangleX, rectangleY);
-    }
-
-    private bool IsFirstRectangle()
-    {
-        return storage.GetAll().FirstOrDefault() == default;
     }
 }
