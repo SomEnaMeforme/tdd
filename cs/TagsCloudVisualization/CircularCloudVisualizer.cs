@@ -12,9 +12,9 @@ namespace TagsCloudVisualization
         private readonly Color backgroundColor = Color.White;
         private readonly Color rectangleColor = Color.DarkBlue;
         private readonly Size imageSize;
-        private readonly RectangleStorage rectangleStorage;
+        private readonly List<RectangleWrapper> rectangleStorage;
 
-        public CircularCloudVisualizer(RectangleStorage rectangles, Size imageSize)
+        public CircularCloudVisualizer(List<RectangleWrapper> rectangles, Size imageSize)
         {
             rectangleStorage = rectangles;
             this.imageSize = imageSize;
@@ -22,7 +22,7 @@ namespace TagsCloudVisualization
 
         public void CreateImage(string? filePath = null, bool withSaveSteps = false)
         {
-            var rectangles = NormalizeSizes(rectangleStorage.GetAll());
+            var rectangles = NormalizeSizes(rectangleStorage.Select(r => (Rectangle)r));
 
             using var image = new Bitmap(imageSize.Width, imageSize.Height);
             using var graphics = Graphics.FromImage(image);

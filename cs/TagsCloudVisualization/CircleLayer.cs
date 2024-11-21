@@ -20,10 +20,10 @@ public class CircleLayer
 
 
     private Sector currentSector;
-    private readonly RectangleStorage storage;
+    private readonly List<RectangleWrapper> storage;
     private readonly List<int> layerRectangles = [];
 
-    private CircleLayer(Point center, int radius, RectangleStorage storage)
+    private CircleLayer(Point center, int radius, List<RectangleWrapper> storage)
     {
         Center = center;
         Radius = radius;
@@ -31,16 +31,14 @@ public class CircleLayer
         this.storage = storage;
     }
 
-    public CircleLayer(Point center, RectangleStorage storage) : this(center, 0, storage)
-    { }
-
-    public void OnSuccessInsertRectangle(int addedRectangleId)
+    public CircleLayer(Point center, List<RectangleWrapper> storage) : this(center, 0, storage)
     {
-        if (addedRectangleId != 0)
-        {
-            currentSector = GetNextClockwiseSector();
-        }
-        layerRectangles.Add(addedRectangleId);
+    }
+
+    public void OnSuccessInsertRectangle()
+    {
+        if (storage.Count != 1) currentSector = GetNextClockwiseSector();
+        layerRectangles.Add(storage.Count - 1);
         if (ShouldCreateNewLayer())
             CreateNextLayerAndChangeCurrentOnNext();
     }
@@ -68,20 +66,21 @@ public class CircleLayer
     private int CalculateRadiusForNextLayer()
     {
         return layerRectangles
-            .Select(id => CalculateDistanceBetweenCenterAndRectangleFarCorner(storage.GetById(id)))
+            .Select(ind => CalculateDistanceBetweenCenterAndRectangleFarCorner(storage[ind]))
             .Min();
     }
 
     private List<int> RemoveRectangleInCircle()
     {
         return layerRectangles
-            .Where(id => CalculateDistanceBetweenCenterAndRectangleFarCorner(storage.GetById(id)) > Radius)
+            .Where(i => CalculateDistanceBetweenCenterAndRectangleFarCorner(storage[i]) > Radius)
             .ToList();
     }
 
     private int CalculateDistanceBetweenCenterAndRectangleFarCorner(Rectangle rectangle)
     {
-        var distanceToCorners = new List<int> {
+        var distanceToCorners = new List<int>
+        {
             Center.CalculateDistanceBetween(new Point(rectangle.Right, rectangle.Top)),
             Center.CalculateDistanceBetween(new Point(rectangle.Right, rectangle.Bottom)),
             Center.CalculateDistanceBetween(new Point(rectangle.Left, rectangle.Bottom)),
@@ -97,12 +96,10 @@ public class CircleLayer
 
         return new Point(rectangleX, rectangleY);
     }
+
     public Point CalculateTopLeftRectangleCornerPosition(Size rectangleSize)
     {
-        if (Radius == 0)
-        {
-            return PutToCenter(rectangleSize);
-        }
+        if (Radius == 0) return PutToCenter(rectangleSize);
         var rectangleStartPositionOnCircle = GetStartSectorPointOnCircleBySector(currentSector);
         return currentSector switch
         {
@@ -112,10 +109,10 @@ public class CircleLayer
                 rectangleStartPositionOnCircle,
             Sector.BottomLeft =>
                 new Point(rectangleStartPositionOnCircle.X - rectangleSize.Width,
-                                rectangleStartPositionOnCircle.Y),
+                    rectangleStartPositionOnCircle.Y),
             _ =>
                 new Point(rectangleStartPositionOnCircle.X - rectangleSize.Width,
-                                rectangleStartPositionOnCircle.Y - rectangleSize.Height),
+                    rectangleStartPositionOnCircle.Y - rectangleSize.Height)
         };
     }
 
@@ -126,7 +123,7 @@ public class CircleLayer
             Sector.TopRight => new Point(Center.X, Center.Y - Radius),
             Sector.BottomRight => new Point(Center.X + Radius, Center.Y),
             Sector.BottomLeft => new Point(Center.X, Center.Y + Radius),
-            _ => new Point(Center.X - Radius, Center.Y),
+            _ => new Point(Center.X - Radius, Center.Y)
         };
     }
 
@@ -138,6 +135,7 @@ public class CircleLayer
             if (ShouldCreateNewLayer()) CreateNextLayerAndChangeCurrentOnNext();
             forInsertion.Location = CalculateTopLeftRectangleCornerPosition(forInsertion.Size);
         }
+
         var nextPosition = CalculateNewPositionWithoutIntersectionBySector(currentSector, forInsertion, intersected);
 
         return nextPosition;
@@ -150,14 +148,16 @@ public class CircleLayer
 
     private bool IsRectangleIntersectSymmetryAxis(Rectangle rectangle)
     {
-        return (rectangle.Left < Center.X && rectangle.Right > Center.X) || (rectangle.Bottom > Center.Y && rectangle.Top < Center.Y);
+        return (rectangle.Left < Center.X && rectangle.Right > Center.X) ||
+               (rectangle.Bottom > Center.Y && rectangle.Top < Center.Y);
     }
 
     private Point CalculateNewPositionWithoutIntersectionBySector(Sector whereIntersected, Rectangle forInsertion,
         Rectangle intersected)
     {
-        bool isMovingAxisIsX = IsMovingAxisIsXBySector(whereIntersected);
-        var distanceForMoving = CalculateDistanceForMovingBySector(whereIntersected, forInsertion, intersected);
+        var isMovingAxisIsX = IsMovingAxisIsXBySector(whereIntersected);
+        var distanceForMoving =
+            CalculateDistanceForMoveClockwiseToPositionWithoutIntersection(whereIntersected, forInsertion, intersected);
 
         int distanceForBringBackOnCircle;
         if (IsRectangleBetweenSectors(distanceForMoving, forInsertion.Location, isMovingAxisIsX))
@@ -171,6 +171,7 @@ public class CircleLayer
             distanceForBringBackOnCircle =
                 CalculateDeltaForBringRectangleBackOnCircle(nearestForCenterCorner, isMovingAxisIsX, forInsertion);
         }
+
         distanceForMoving *= CalculateMoveMultiplierForMoveClockwise(isMovingAxisIsX, forInsertion);
         distanceForBringBackOnCircle *= CalculateMoveMultiplierForMoveFromCenter(!isMovingAxisIsX, forInsertion);
         return isMovingAxisIsX
@@ -186,7 +187,8 @@ public class CircleLayer
         return distanceForMoving > distanceToCenter;
     }
 
-    private int CalculateDeltaForBringRectangleBackOnCircle(Point nearestForCenterCorner, bool isMovingAxisIsX, Rectangle forInsertion)
+    private int CalculateDeltaForBringRectangleBackOnCircle(Point nearestForCenterCorner, bool isMovingAxisIsX,
+        Rectangle forInsertion)
     {
         Func<Point, int> getAxisForBringBackOnCircle = isMovingAxisIsX ? p => p.Y : p => p.X;
         Func<Point, int> getStaticAxis = isMovingAxisIsX ? p => p.X : p => p.Y;
@@ -196,17 +198,16 @@ public class CircleLayer
                                                           getAxisForBringBackOnCircle(Center));
         var distanceBetweenCornerAndCenter = Center.CalculateDistanceBetween(nearestForCenterCorner);
         if (distanceBetweenCornerAndCenter > Radius)
-        {
             return CalculateMoveMultiplierForMoveToCenter(!isMovingAxisIsX, forInsertion)
                    * WhenRectangleOutsideCircle(distanceOnStaticAxis, distanceBetweenCornerAndCenter,
-                distanceOnAxisForBringBackOnCircle);
-        }
+                       distanceOnAxisForBringBackOnCircle);
 
         return CalculateMoveMultiplierForMoveFromCenter(!isMovingAxisIsX, forInsertion)
                * WhenRectangleInCircle(distanceOnStaticAxis, distanceOnAxisForBringBackOnCircle);
     }
 
-    private int WhenRectangleOutsideCircle(int distanceOnStaticAxis, int distanceBetweenCornerAndCenter, int distanceOnAxisForBringBackOnCircle)
+    private int WhenRectangleOutsideCircle(int distanceOnStaticAxis, int distanceBetweenCornerAndCenter,
+        int distanceOnAxisForBringBackOnCircle)
     {
         var inCircleCathetusPart = Math.Sqrt(Math.Abs(Radius * Radius - distanceOnStaticAxis * distanceOnStaticAxis));
         return CalculatePartCathetus(distanceBetweenCornerAndCenter, inCircleCathetusPart,
@@ -223,7 +224,8 @@ public class CircleLayer
         return (int)Math.Ceiling(Math.Sqrt(Math.Abs(hypotenuse * hypotenuse - a * a))) - b;
     }
 
-    private Point CalculateCornerNearestForCenterAfterMove(Sector whereIntersected, int distanceForMoving, Rectangle forMove)
+    private Point CalculateCornerNearestForCenterAfterMove(Sector whereIntersected, int distanceForMoving,
+        Rectangle forMove)
     {
         var isAxisForMoveIsX = IsMovingAxisIsXBySector(whereIntersected);
         var moveMultiplier = CalculateMoveMultiplierForMoveClockwise(isAxisForMoveIsX, forMove);
@@ -257,17 +259,19 @@ public class CircleLayer
         if (forMove.Top > Center.Y && forMove.Right < Center.X) return -1;
         return isAxisForMoveIsX ? forMove.Bottom < Center.Y ? 1 : -1
             : forMove.Left > Center.X ? -1 : 1;
-
     }
 
-    private int CalculateDistanceForMovingBySector(Sector whereIntersected, Rectangle forInsertion, Rectangle intersected)
+    private int CalculateDistanceForMoveClockwiseToPositionWithoutIntersection(
+        Sector whereIntersected,
+        Rectangle forInsertion,
+        Rectangle intersected)
     {
         return whereIntersected switch
         {
             Sector.TopRight => Math.Abs(forInsertion.Top - intersected.Bottom),
             Sector.BottomRight => Math.Abs(forInsertion.Right - intersected.Left),
             Sector.BottomLeft => Math.Abs(forInsertion.Bottom - intersected.Top),
-            _ => Math.Abs(forInsertion.Left - intersected.Right),
+            _ => Math.Abs(forInsertion.Left - intersected.Right)
         };
     }
 
@@ -278,7 +282,7 @@ public class CircleLayer
             Sector.TopRight => new Point(forInsertion.Left, forInsertion.Bottom),
             Sector.BottomRight => new Point(forInsertion.Left, forInsertion.Top),
             Sector.BottomLeft => new Point(forInsertion.Right, forInsertion.Top),
-            _ => new Point(forInsertion.Right, forInsertion.Bottom),
+            _ => new Point(forInsertion.Right, forInsertion.Bottom)
         };
     }
 

@@ -8,7 +8,7 @@ namespace TagsCloudVisualization;
 public class CircularCloudLayouter
 {
     private readonly Point center;
-    private readonly RectangleStorage storage = new();
+    private readonly List<RectangleWrapper> storage = [];
     private readonly BruteForceNearestFinder nearestFinder;
 
     public CircleLayer CurrentLayer { get; }
@@ -20,7 +20,7 @@ public class CircularCloudLayouter
         CurrentLayer = new(center, storage);
     }
 
-    internal CircularCloudLayouter(Point center, RectangleStorage storage) : this(center)
+    internal CircularCloudLayouter(Point center, List<RectangleWrapper> storage) : this(center)
     {
         this.storage = storage;
         CurrentLayer = new(center, storage);
@@ -29,43 +29,37 @@ public class CircularCloudLayouter
     public Rectangle PutNextRectangle(Size rectangleSize)
     {
         ValidateRectangleSize(rectangleSize);
+        
         var firstRectanglePosition = CurrentLayer.CalculateTopLeftRectangleCornerPosition(rectangleSize);
-        var id = SaveRectangle(firstRectanglePosition, rectangleSize);
-        var rectangleWithOptimalPosition = OptimiseRectanglePosition(id);
+        var forInsertion = new Rectangle(firstRectanglePosition, rectangleSize);
+        var rectangleWithOptimalPosition = OptimiseRectanglePosition(forInsertion);
+        storage.Add(rectangleWithOptimalPosition);
+        CurrentLayer.OnSuccessInsertRectangle();
         return rectangleWithOptimalPosition;
     }
 
-    private int SaveRectangle(Point firstLocation, Size rectangleSize)
+    private Rectangle OptimiseRectanglePosition(Rectangle forInsertion)
     {
-        var id = storage.Add(new Rectangle(firstLocation, rectangleSize));
-        return id;
+        PutRectangleOnCircleWithoutIntersection(forInsertion);
+        return TryMoveRectangleCloserToCenter(forInsertion);
     }
 
-    private Rectangle OptimiseRectanglePosition(int id)
+    public Rectangle PutRectangleOnCircleWithoutIntersection(RectangleWrapper forOptimise)
     {
-        PutRectangleOnCircleWithoutIntersection(id);
-        return TryMoveRectangleCloserToCenter(id);
-    }
-
-    public Rectangle PutRectangleOnCircleWithoutIntersection(int id)
-    {
-        var forOptimise = storage.GetById(id);
         var intersected = GetRectangleIntersection(forOptimise);
 
-        while (intersected != default && intersected.Value != default)
+        while (intersected != null && intersected.Value != default)
         {
             var possiblePosition = CurrentLayer.GetRectanglePositionWithoutIntersection(forOptimise, intersected.Value);
             forOptimise.Location = possiblePosition;
             intersected = GetRectangleIntersection(forOptimise);
         }
 
-        CurrentLayer.OnSuccessInsertRectangle(id);
         return forOptimise;
     }
 
-    internal Rectangle TryMoveRectangleCloserToCenter(int id)
+    internal Rectangle TryMoveRectangleCloserToCenter(RectangleWrapper rectangleForMoving)
     {
-        var rectangleForMoving = storage.GetById(id);
         var toCenter = GetDirectionsForMovingToCenter(rectangleForMoving);
         foreach (var direction in toCenter)
         {
@@ -77,14 +71,14 @@ public class CircularCloudLayouter
 
     private Point MoveToCenterByDirection(Rectangle forMoving, Direction toCenter)
     {
-        var nearest = nearestFinder.FindNearestByDirection(forMoving, toCenter, storage.GetAll());
+        var nearest = nearestFinder.FindNearestByDirection(forMoving, toCenter, storage.Select(r => (Rectangle)r));
         if (nearest == null) return forMoving.Location;
         var distanceCalculator = nearestFinder.GetMinDistanceCalculatorBy(toCenter);
         var distanceForMove = distanceCalculator(nearest.Value, forMoving);
         return MoveByDirection(forMoving.Location, distanceForMove, toCenter);
     }
 
-    private Point MoveByDirection(Point forMoving, int distance, Direction toCenter)
+    private static Point MoveByDirection(Point forMoving, int distance, Direction toCenter)
     {
         var factorForDistanceByX = toCenter switch
         {
@@ -114,7 +108,7 @@ public class CircularCloudLayouter
         return directions;
     }
 
-    private void ValidateRectangleSize(Size forInsertion)
+    private static void ValidateRectangleSize(Size forInsertion)
     {
         if (forInsertion.Width <= 0 || forInsertion.Height <= 0)
             throw new ArgumentException($"Rectangle has incorrect size: width = {forInsertion.Width}, height = {forInsertion.Height}");
@@ -122,7 +116,8 @@ public class CircularCloudLayouter
 
     private Rectangle? GetRectangleIntersection(Rectangle forInsertion)
     {
-        return storage.GetAll()
-            .FirstOrDefault(r => forInsertion.IntersectsWith(r) && forInsertion != r);
+        if (storage.Count == 0) return null;
+        return storage.Select(r => (Rectangle)r).FirstOrDefault(r => forInsertion != r
+                                             && forInsertion.IntersectsWith(r));
     }
 }

@@ -11,7 +11,7 @@ public class CircleLayerTests
 {
     private CircleLayer currentLayer;
     private Size defaultRectangleSize;
-    private RectangleStorage storage;
+    private List<RectangleWrapper> storage;
 
     public static IEnumerable<TestCaseData> SimpleIntersectionInSector
     {
@@ -61,10 +61,12 @@ public class CircleLayerTests
     [SetUp]
     public void SetUp()
     {
-        var startRadius = 5;
         var center = new Point(5, 5);
-        storage = new RectangleStorage();
-        currentLayer = new CircleLayer(center, startRadius, storage);
+        storage = new ();
+        currentLayer = new CircleLayer(center, storage);
+        var first = new Rectangle(currentLayer.CalculateTopLeftRectangleCornerPosition(new Size(8, 6)), new Size(8, 6));
+        storage.Add(first);
+        currentLayer.OnSuccessInsertRectangle(first);
         defaultRectangleSize = new Size(3, 4);
     }
 
@@ -74,14 +76,14 @@ public class CircleLayerTests
         var possibleRectangleLocation = currentLayer.CalculateTopLeftRectangleCornerPosition(defaultRectangleSize);
 
         possibleRectangleLocation.Should()
-            .Be(GetCorrectRectangleLocationByExpectedSector(Sector.Top_Right, defaultRectangleSize));
+            .Be(GetCorrectRectangleLocationByExpectedSector(Sector.TopRight, defaultRectangleSize));
     }
 
-    [TestCase(1, Sector.Bottom_Right)]
-    [TestCase(2, Sector.Bottom_Left)]
-    [TestCase(3, Sector.Top_Left)]
-    [TestCase(4, Sector.Top_Right)]
-    [TestCase(0, Sector.Top_Right)]
+    [TestCase(1, Sector.BottomRight)]
+    [TestCase(2, Sector.BottomLeft)]
+    [TestCase(3, Sector.TopLeft)]
+    [TestCase(4, Sector.TopRight)]
+    [TestCase(0, Sector.TopRight)]
     public void CircleLayer_InsertRectangleInNextSector_AfterSuccessInsertion(int insertionsCount, Sector expected)
     {
         currentLayer = GetLayerAfterFewInsertionsRectangleWithSameSize(currentLayer, insertionsCount);
@@ -99,9 +101,9 @@ public class CircleLayerTests
         currentLayer = GetLayerAfterFewInsertionsRectangleWithSameSize(currentLayer, 3);
         var nextRectangleLocation =
             GetCorrectRectangleLocationByExpectedSector(GetSectorByInsertionsCount(4), defaultRectangleSize);
-        var insertedRectangleId = storage.Add(new Rectangle(nextRectangleLocation, new Size(2, 2)));
+        storage.Add(new Rectangle(nextRectangleLocation, new Size(2, 2)));
 
-        currentLayer.OnSuccessInsertRectangle(insertedRectangleId);
+        currentLayer.OnSuccessInsertRectangle(storage.Last());
 
         currentLayer.Radius.Should().Be(9);
     }
@@ -118,20 +120,16 @@ public class CircleLayerTests
         return (Sector)((count - 1) % 4);
     }
 
-    private Point GetCorrectRectangleLocationByExpectedSector(Sector s, Size size)
+    private Point GetCorrectRectangleLocationByExpectedSector(Sector expected, Size size)
     {
-        switch (s)
+        return expected switch
         {
-            case Sector.Top_Right:
-                return new Point(currentLayer.Center.X, currentLayer.Center.Y - currentLayer.Radius - size.Height);
-            case Sector.Bottom_Right:
-                return new Point(currentLayer.Center.X + currentLayer.Radius, currentLayer.Center.Y);
-            case Sector.Bottom_Left:
-                return new Point(currentLayer.Center.X - size.Width, currentLayer.Center.Y + currentLayer.Radius);
-            default:
-                return new Point(currentLayer.Center.X - currentLayer.Radius - size.Width,
-                    currentLayer.Center.Y - size.Height);
-        }
+            Sector.TopRight => new Point(currentLayer.Center.X, currentLayer.Center.Y - currentLayer.Radius - size.Height),
+            Sector.BottomRight => new Point(currentLayer.Center.X + currentLayer.Radius, currentLayer.Center.Y),
+            Sector.BottomLeft => new Point(currentLayer.Center.X - size.Width, currentLayer.Center.Y + currentLayer.Radius),
+            _ => new Point(currentLayer.Center.X - currentLayer.Radius - size.Width,
+                                currentLayer.Center.Y - size.Height),
+        };
     }
 
     [Test]
@@ -207,7 +205,8 @@ public class CircleLayerTests
         {
             var location = GetCorrectRectangleLocationByExpectedSector(GetSectorByInsertionsCount(i), sizes[i - 1]);
             var rectangleForInsert = new Rectangle(location, sizes[i - 1]);
-            layer.OnSuccessInsertRectangle(storage.Add(rectangleForInsert));
+            storage.Add(rectangleForInsert);
+            layer.OnSuccessInsertRectangle(storage.Last());
         }
 
         return layer;

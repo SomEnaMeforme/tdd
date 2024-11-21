@@ -6,6 +6,8 @@ using FluentAssertions;
 using NUnit.Framework.Interfaces;
 using System.IO;
 using System.Reflection;
+using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace TagsCloudVisualization.Tests
 {
@@ -13,13 +15,13 @@ namespace TagsCloudVisualization.Tests
     {
         private CircularCloudLayouter layouter;
         private Point defaultCenter;
-        private RectangleStorage storage;
+        private List<RectangleWrapper> storage;
 
         [SetUp]
         public void SetUp()
         {
             defaultCenter = new Point(5, 5);
-            storage = new RectangleStorage();
+            storage = [];
             layouter = new CircularCloudLayouter(defaultCenter, storage);
         }
 
@@ -28,12 +30,12 @@ namespace TagsCloudVisualization.Tests
         {
             if (TestContext.CurrentContext.Result.Outcome.Status == TestStatus.Failed)
             {
-                var testObj = TestContext.CurrentContext.Test.Parent.Fixture as CircularCloudLayouterTests;
+                var testObj = TestContext.CurrentContext.Test.Parent?.Fixture as CircularCloudLayouterTests;
                 var info = typeof(CircularCloudLayouterTests)
                     .GetField("storage", BindingFlags.NonPublic | BindingFlags.Instance);
-                var st = info.GetValue(testObj);
+                var st = info?.GetValue(testObj);
 
-                var visualizator = new CircularCloudVisualization(st as RectangleStorage, new Size(1000, 1000));
+                var visualizator = new CircularCloudVisualizer(st as List<RectangleWrapper> ?? [], new Size(1000, 1000));
                 var pathFile = Path.Combine(Directory.GetCurrentDirectory(), TestContext.CurrentContext.Test.Name);
                 visualizator.CreateImage(pathFile);
                 TestContext.Out.WriteLine($"Tag cloud visualization saved to file {pathFile}");
@@ -68,14 +70,8 @@ namespace TagsCloudVisualization.Tests
         }
 
         [Test]
-        public void PutNextRectangle_ShouldCreateFirstCircleLayer_AfterPutFirstRectangle()
+        public void PutNextRectangle_ShouldCreateFirstCircleLayer_AfterCreation()
         {
-            var firstRectangleSize = new Size(6, 4);
-
-            layouter.CurrentLayer.Should().BeNull();
-
-            layouter.PutNextRectangle(firstRectangleSize);
-
             layouter.CurrentLayer.Should().NotBeNull();
         }
 
@@ -103,7 +99,7 @@ namespace TagsCloudVisualization.Tests
             var rPos = layouter.CurrentLayer.CalculateTopLeftRectangleCornerPosition(firstRectangleSize);
 
             ;
-            var secondRectangleLocation = layouter.PutRectangleOnCircleWithoutIntersection(storage.Add(new (rPos, firstRectangleSize))).Location;
+            var secondRectangleLocation = layouter.PutRectangleOnCircleWithoutIntersection(new(new(rPos, firstRectangleSize))).Location;
 
             secondRectangleLocation.Should().Be(expected);
         }
@@ -114,24 +110,25 @@ namespace TagsCloudVisualization.Tests
             var firstRectangleSize = new Size(6, 4);
             var expected = new Point(14, 1);
             layouter = new CircularCloudLayouter(defaultCenter, storage);
-            var sizes = new Size[] { new(4, 7), new(4, 4), new(4, 4), new(4, 4)};
+            var sizes = new Size[] { new(4, 7), new(4, 4), new(4, 4), new(4, 4) };
             layouter.PutNextRectangle(firstRectangleSize);
             layouter = InsertionsWithoutCompress(4, layouter, sizes, storage);
             var rectangleWithIntersection =
                 new Rectangle(layouter.CurrentLayer.CalculateTopLeftRectangleCornerPosition(new(3, 3)), new(3, 3));
 
-            var rectangleLocation = layouter.PutRectangleOnCircleWithoutIntersection(storage.Add(rectangleWithIntersection)).Location;
+            var rectangleLocation = layouter.PutRectangleOnCircleWithoutIntersection(rectangleWithIntersection).Location;
 
             rectangleLocation.Should().Be(expected);
         }
 
-        private CircularCloudLayouter InsertionsWithoutCompress(int insertionsCount, CircularCloudLayouter l, Size[] sizes, RectangleStorage storage)
+        private static CircularCloudLayouter InsertionsWithoutCompress(int insertionsCount, CircularCloudLayouter l, Size[] sizes, List<RectangleWrapper> storage)
         {
             for (var i = 0; i < insertionsCount; i++)
             {
                 var pos = l.CurrentLayer.CalculateTopLeftRectangleCornerPosition(sizes[i]);
-                var r = new Rectangle(pos, sizes[i]);
-                l.PutRectangleOnCircleWithoutIntersection(storage.Add(r));
+                var forInsertion = new Rectangle(pos, sizes[i]);
+                storage.Add(forInsertion);
+                l.PutRectangleOnCircleWithoutIntersection(forInsertion);
             }
 
             return l;

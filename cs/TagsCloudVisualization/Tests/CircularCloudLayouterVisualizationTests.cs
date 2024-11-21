@@ -1,41 +1,44 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
-using System.Linq;
 using NUnit.Framework;
 
 namespace TagsCloudVisualization.Tests;
 
 public class CircularCloudLayouterVisualizationTests
 {
-    private readonly Size ImageSize = new(1000, 1000);
+    private Size imageSize;
+    private Point center;
+    private CircularCloudVisualizer visualizer;
+
+    [SetUp]
+    public void SetUp()
+    {
+        imageSize = new(1000, 1000);
+        center = new Point(imageSize.Width / 2, imageSize.Height / 2);
+        visualizer = new CircularCloudVisualizer(GenerateRectangles(center, 100, 10, 100), imageSize);
+    }
 
     [Test]
     public void GenerateImage()
     {
-        var center = new Point(ImageSize.Width / 2, ImageSize.Height / 2);
-        var visualizator = new CircularCloudVisualization(GenerateRectangles(center), ImageSize);
-        visualizator.CreateImage();
-    }
-
-    private RectangleStorage GenerateRectangles(Point center)
-    {
-        var rnd = new Random();
-        var storage = new RectangleStorage();
-        var layouter = new CircularCloudLayouter(center, storage);
-        for (var i = 0; i < 41; i++) layouter.PutNextRectangle(new Size(rnd.Next(50, 100), rnd.Next(50, 100)));
-
-        return storage;
+        visualizer.CreateImage();
     }
 
     [Test]
     public void GenerateImageWithSaveEveryStep()
     {
+        visualizer.CreateImage(withSaveSteps: true);
+    }
+
+    private static List<RectangleWrapper> GenerateRectangles(Point center, int maxSize, int minSize, int count)
+    {
         var rnd = new Random();
-        var center = new Point(ImageSize.Width / 2, ImageSize.Height / 2);
-        var visualizator = new CircularCloudVisualization(new RectangleStorage(), ImageSize);
-        var layouter = new CircularCloudLayouter(center, new RectangleStorage());
-        visualizator.CreateImageWithSaveEveryStep(layouter,
-            new Size[41].Select(x => new Size(15, 100)).ToArray());
+        var storage = new List<RectangleWrapper>();
+        var layouter = new CircularCloudLayouter(center, storage);
+        for (var i = 0; i < count; i++) layouter.PutNextRectangle(new Size(rnd.Next(minSize, maxSize),
+            rnd.Next(minSize, maxSize)));
+
+        return storage;
     }
 }
