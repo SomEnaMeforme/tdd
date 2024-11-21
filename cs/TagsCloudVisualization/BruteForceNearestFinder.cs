@@ -5,21 +5,22 @@ using System.Linq;
 
 namespace TagsCloudVisualization
 {
-    public class BruteForceNearestFinder
+    public static class BruteForceNearestFinder
     {
-        public Rectangle? FindNearestByDirection(Rectangle r, Direction direction, List<Rectangle> rectangles)
+        public static Rectangle? FindNearestByDirection(Rectangle r, Direction direction, List<Rectangle> rectangles)
         {
             if (rectangles.FirstOrDefault() == default)
                 return null;
             var calculator = GetMinDistanceCalculatorBy(direction);
             var nearestByDirection = rectangles
-                .Select(possibleNearest => (Distance: calculator(possibleNearest, r), CurrentEl: possibleNearest))
-                .Where(el => el.Distance >= 0).ToList();
+                .Select(possibleNearest => (Distance: calculator(possibleNearest, r), Nearest: possibleNearest ))
+                .Where(el => el.Distance >= 0)
+                .ToList();
 
-            return nearestByDirection.Count > 0 ? nearestByDirection.MinBy(el => el.Distance).CurrentEl : null;
+            return nearestByDirection.Count > 0 ? nearestByDirection.MinBy(el => el.Distance).Nearest : null;
         }
 
-        public Func<Rectangle, Rectangle, int> GetMinDistanceCalculatorBy(Direction direction)
+        public static Func<Rectangle, Rectangle, int> GetMinDistanceCalculatorBy(Direction direction)
         {
             return direction switch
             {

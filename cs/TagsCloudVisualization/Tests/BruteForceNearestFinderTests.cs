@@ -7,18 +7,12 @@ namespace TagsCloudVisualization.Tests
 {
     public class BruteForceNearestFinderTests
     {
-        private BruteForceNearestFinder finder;
-        [SetUp]
-        public void SetUp()
-        {
-            finder = new BruteForceNearestFinder();
-        }
         [Test]
         public void FindNearest_ShouldReturnNull_OnEmptyRectangles()
         {
             var rectangleForFind = new Rectangle(new Point(5, 7), new Size(4, 2));
 
-            finder.FindNearestByDirection(rectangleForFind, Direction.Top, []).Should().BeNull();
+            BruteForceNearestFinder.FindNearestByDirection(rectangleForFind, Direction.Top, []).Should().BeNull();
         }
 
         [TestCase(4, 10, Direction.Top)]
@@ -36,7 +30,7 @@ namespace TagsCloudVisualization.Tests
             var rectangleForFind = new Rectangle(new Point(x, y), new Size(2, 1));
             var rectangles = new List<Rectangle> { addedRectangle1, addedRectangle2 };
 
-            var nearest = finder.FindNearestByDirection(rectangleForFind, direction, rectangles);
+            var nearest = BruteForceNearestFinder.FindNearestByDirection(rectangleForFind, direction, rectangles);
 
             nearest.Should().Be(isFirstNearest ? addedRectangle1 : addedRectangle2);
         }

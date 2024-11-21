@@ -22,15 +22,14 @@ namespace TagsCloudVisualization
 
         public void CreateImage(string? filePath = null, bool withSaveSteps = false)
         {
-            var rectangles = rectangleStorage.Select(r => (Rectangle)r).ToArray();
-            rectangles = NormalizeSizes(rectangles);
+            var rectangles = rectangleStorage.ToArray();
 
             using var image = new Bitmap(imageSize.Width, imageSize.Height);
             using var graphics = Graphics.FromImage(image);
             graphics.Clear(backgroundColor);
             graphics.DrawGrid();
             var pen = new Pen(rectangleColor);
-            
+
             for (var i = 0; i < rectangles.Length; i++)
             {
                 var nextRectangle = rectangles[i];
@@ -48,28 +47,6 @@ namespace TagsCloudVisualization
             var rnd = new Random();
             filePath ??= Path.Combine(Path.GetTempPath(), $"testImage{rnd.Next()}.png");
             image.Save(filePath, ImageFormat.Png);
-        }
-
-        private Rectangle[] NormalizeSizes(IEnumerable<Rectangle> source)
-        {
-            var xLength = source.Max(r => r.Right) - source.Min(r => r.Left);
-            var yLength = source.Max(r => r.Bottom) - source.Min(r => r.Top);
-
-            var factorX = GetNormalizeFactorByAxis(imageSize.Width, xLength);
-            var factorY = GetNormalizeFactorByAxis(imageSize.Height, yLength);
-
-            return source.Select(r => new Rectangle(
-                    new Point(r.X * factorX, r.Y * factorY),
-                    new Size(r.Width * factorX, r.Height * factorY)))
-                .ToArray();
-        }
-
-        private static int GetNormalizeFactorByAxis(int imageSizeOnAxis, int rectanglesSizeOnAxis)
-        {
-            const int boundShift = 10;
-            double imageSizeOnAxisWithShiftForBounds = imageSizeOnAxis - boundShift;
-            var stretchFactor = (int)Math.Floor(imageSizeOnAxisWithShiftForBounds / rectanglesSizeOnAxis);
-            return imageSizeOnAxisWithShiftForBounds > rectanglesSizeOnAxis ? stretchFactor : 1;
         }
     }
 }
