@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Drawing;
-using System.Linq;
 using NUnit.Framework;
 using FluentAssertions;
 using NUnit.Framework.Interfaces;
 using System.IO;
 using System.Reflection;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace TagsCloudVisualization.Tests
 {
@@ -15,7 +13,7 @@ namespace TagsCloudVisualization.Tests
     {
         private CircularCloudLayouter layouter;
         private Point defaultCenter;
-        private List<RectangleWrapper> storage;
+        private List<Rectangle> storage;
 
         [SetUp]
         public void SetUp()
@@ -35,9 +33,9 @@ namespace TagsCloudVisualization.Tests
                     .GetField("storage", BindingFlags.NonPublic | BindingFlags.Instance);
                 var st = info?.GetValue(testObj);
 
-                var visualizator = new CircularCloudVisualizer(st as List<RectangleWrapper> ?? [], new Size(1000, 1000));
+                var visualizer = new CircularCloudVisualizer(st as List<Rectangle> ?? [], new Size(1000, 1000));
                 var pathFile = Path.Combine(Directory.GetCurrentDirectory(), TestContext.CurrentContext.Test.Name);
-                visualizator.CreateImage(pathFile);
+                visualizer.CreateImage(pathFile);
                 TestContext.Out.WriteLine($"Tag cloud visualization saved to file {pathFile}");
             }
         }
@@ -89,49 +87,27 @@ namespace TagsCloudVisualization.Tests
         }
 
         [Test]
-        public void PutRectangleOnCircleWithoutIntersection_ShouldUseCircleLayer_ForChoosePositionForRectangle()
-        {
-            var firstRectangleSize = new Size(4, 4);
-            var expectedRadius = 7;
-            layouter = new CircularCloudLayouter(defaultCenter, storage);
-            var expected = new Point(defaultCenter.X, defaultCenter.Y - expectedRadius);
-            layouter.PutNextRectangle(firstRectangleSize);
-            var rPos = layouter.CurrentLayer.CalculateTopLeftRectangleCornerPosition(firstRectangleSize);
-
-            ;
-            var secondRectangleLocation = layouter.PutRectangleOnCircleWithoutIntersection(new(new(rPos, firstRectangleSize))).Location;
-
-            secondRectangleLocation.Should().Be(expected);
-        }
-
-        [Test]
         public void PutRectangleOnCircleWithoutIntersection_ShouldPutRectangleWithoutIntersection()
         {
-            var firstRectangleSize = new Size(6, 4);
             var expected = new Point(14, 1);
-            layouter = new CircularCloudLayouter(defaultCenter, storage);
-            var sizes = new Size[] { new(4, 7), new(4, 4), new(4, 4), new(4, 4) };
-            layouter.PutNextRectangle(firstRectangleSize);
-            layouter = InsertionsWithoutCompress(4, layouter, sizes, storage);
-            var rectangleWithIntersection =
-                new Rectangle(layouter.CurrentLayer.CalculateTopLeftRectangleCornerPosition(new(3, 3)), new(3, 3));
 
-            var rectangleLocation = layouter.PutRectangleOnCircleWithoutIntersection(rectangleWithIntersection).Location;
+            var sizes = new Size[] { new (6, 4), new(4, 7), new(4, 4), new(4, 4), new(4, 4) };
+            layouter = InsertionsWithoutCompress(layouter, sizes, storage);
+            var rectangleLocation = layouter.PutRectangleWithoutIntersection(new(3, 3)).Location;
 
             rectangleLocation.Should().Be(expected);
         }
 
-        private static CircularCloudLayouter InsertionsWithoutCompress(int insertionsCount, CircularCloudLayouter l, Size[] sizes, List<RectangleWrapper> storage)
+        private static CircularCloudLayouter InsertionsWithoutCompress(CircularCloudLayouter layouter, Size[] sizes, List<Rectangle> storage)
         {
-            for (var i = 0; i < insertionsCount; i++)
+            for (var i = 0; i < sizes.Length; i++)
             {
-                var pos = l.CurrentLayer.CalculateTopLeftRectangleCornerPosition(sizes[i]);
-                var forInsertion = new Rectangle(pos, sizes[i]);
+                var forInsertion = layouter.PutRectangleWithoutIntersection(sizes[i]);
                 storage.Add(forInsertion);
-                l.PutRectangleOnCircleWithoutIntersection(forInsertion);
+                layouter.CurrentLayer.OnSuccessInsertRectangle();
             }
 
-            return l;
+            return layouter;
         }
 
         [Test]

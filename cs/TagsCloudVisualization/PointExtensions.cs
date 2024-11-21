@@ -9,9 +9,9 @@ namespace TagsCloudVisualization
 {
     public static class PointExtensions
     {
-        public static int CalculateDistanceBetween(this Point p1, Point p2)
+        public static int CalculateDistanceBetween(this Point current, Point other)
         {
-            return (int)Math.Ceiling(Math.Sqrt((p1.X - p2.X) * (p1.X - p2.X) + (p1.Y - p2.Y) * (p1.Y - p2.Y)));
+            return (int)Math.Ceiling(Math.Sqrt((current.X - other.X) * (current.X - other.X) + (current.Y - other.Y) * (current.Y - other.Y)));
         }
     }
 }

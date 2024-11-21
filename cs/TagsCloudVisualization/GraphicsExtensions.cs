@@ -11,7 +11,7 @@ namespace TagsCloudVisualization
     {
         public static void DrawGrid(this Graphics graphics, int cellsCount = 100, int cellSize = 10)
         {
-            Pen p = new Pen(Color.DarkGray);
+            Pen p = new (Color.DarkGray);
 
             for (int y = 0; y < cellsCount; ++y)
             {

@@ -20,10 +20,10 @@ public class CircleLayer
 
 
     private Sector currentSector;
-    private readonly List<RectangleWrapper> storage;
+    private readonly List<Rectangle> storage;
     private readonly List<int> layerRectangles = [];
 
-    private CircleLayer(Point center, int radius, List<RectangleWrapper> storage)
+    private CircleLayer(Point center, int radius, List<Rectangle> storage)
     {
         Center = center;
         Radius = radius;
@@ -31,12 +31,12 @@ public class CircleLayer
         this.storage = storage;
     }
 
-    public CircleLayer(Point center, List<RectangleWrapper> storage) : this(center, 0, storage)
-    {
-    }
+    public CircleLayer(Point center, List<Rectangle> storage) : this(center, 0, storage)
+    { }
 
     public void OnSuccessInsertRectangle()
     {
+        if (storage.Count == 0) throw new InvalidOperationException("Rectangle was not added");
         if (storage.Count != 1) currentSector = GetNextClockwiseSector();
         layerRectangles.Add(storage.Count - 1);
         if (ShouldCreateNewLayer())
@@ -97,7 +97,7 @@ public class CircleLayer
         return new Point(rectangleX, rectangleY);
     }
 
-    public Point CalculateTopLeftRectangleCornerPosition(Size rectangleSize)
+    public Point AddNextRectangle(Size rectangleSize)
     {
         if (Radius == 0) return PutToCenter(rectangleSize);
         var rectangleStartPositionOnCircle = GetStartSectorPointOnCircleBySector(currentSector);
@@ -129,21 +129,16 @@ public class CircleLayer
 
     public Point GetRectanglePositionWithoutIntersection(Rectangle forInsertion, Rectangle intersected)
     {
-        if (IsNextPositionMoveToAnotherSector(forInsertion.Location, forInsertion.Size))
+        if (IsRectangleIntersectSymmetryAxis(new Rectangle(forInsertion.Location, forInsertion.Size)))
         {
             currentSector = GetNextClockwiseSector();
             if (ShouldCreateNewLayer()) CreateNextLayerAndChangeCurrentOnNext();
-            forInsertion.Location = CalculateTopLeftRectangleCornerPosition(forInsertion.Size);
+            forInsertion.Location = AddNextRectangle(forInsertion.Size);
         }
 
         var nextPosition = CalculateNewPositionWithoutIntersectionBySector(currentSector, forInsertion, intersected);
 
         return nextPosition;
-    }
-
-    private bool IsNextPositionMoveToAnotherSector(Point next, Size forInsertionSize)
-    {
-        return IsRectangleIntersectSymmetryAxis(new Rectangle(next, forInsertionSize));
     }
 
     private bool IsRectangleIntersectSymmetryAxis(Rectangle rectangle)
@@ -262,9 +257,7 @@ public class CircleLayer
     }
 
     private int CalculateDistanceForMoveClockwiseToPositionWithoutIntersection(
-        Sector whereIntersected,
-        Rectangle forInsertion,
-        Rectangle intersected)
+        Sector whereIntersected, Rectangle forInsertion, Rectangle intersected)
     {
         return whereIntersected switch
         {
@@ -275,7 +268,7 @@ public class CircleLayer
         };
     }
 
-    private Point GetCornerNearestForCenterBySector(Sector rectangleLocationSector, Rectangle forInsertion)
+    private static Point GetCornerNearestForCenterBySector(Sector rectangleLocationSector, Rectangle forInsertion)
     {
         return rectangleLocationSector switch
         {

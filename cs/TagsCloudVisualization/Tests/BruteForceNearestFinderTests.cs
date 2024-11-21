@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using NUnit.Framework;
 using FluentAssertions;
 using System.Drawing;
@@ -22,7 +18,7 @@ namespace TagsCloudVisualization.Tests
         {
             var rectangleForFind = new Rectangle(new Point(5, 7), new Size(4, 2));
 
-            finder.FindNearestByDirection(rectangleForFind, Direction.Top, Array.Empty<Rectangle>()).Should().BeNull();
+            finder.FindNearestByDirection(rectangleForFind, Direction.Top, []).Should().BeNull();
         }
 
         [TestCase(4, 10, Direction.Top)]
@@ -38,7 +34,7 @@ namespace TagsCloudVisualization.Tests
             var addedRectangle1 = new Rectangle(new Point(2, 2), new Size(3, 4));
             var addedRectangle2 = new Rectangle(new Point(5, 7), new Size(4, 2));
             var rectangleForFind = new Rectangle(new Point(x, y), new Size(2, 1));
-            var rectangles = new[] { addedRectangle1, addedRectangle2 };
+            var rectangles = new List<Rectangle> { addedRectangle1, addedRectangle2 };
 
             var nearest = finder.FindNearestByDirection(rectangleForFind, direction, rectangles);
 

@@ -2,15 +2,12 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TagsCloudVisualization
 {
     public class BruteForceNearestFinder
     {
-        public Rectangle? FindNearestByDirection(Rectangle r, Direction direction, IEnumerable<Rectangle> rectangles)
+        public Rectangle? FindNearestByDirection(Rectangle r, Direction direction, List<Rectangle> rectangles)
         {
             if (rectangles.FirstOrDefault() == default)
                 return null;
@@ -24,13 +21,13 @@ namespace TagsCloudVisualization
 
         public Func<Rectangle, Rectangle, int> GetMinDistanceCalculatorBy(Direction direction)
         {
-            switch (direction)
+            return direction switch
             {
-                case Direction.Left: return (possibleNearest, rectangleForFind) => rectangleForFind.Left - possibleNearest.Right;
-                case Direction.Right: return (possibleNearest, rectangleForFind) => possibleNearest.Left - rectangleForFind.Right;
-                case Direction.Top: return (possibleNearest, rectangleForFind) => rectangleForFind.Top - possibleNearest.Bottom;
-                default: return (possibleNearest, rectangleForFind) => possibleNearest.Top - rectangleForFind.Bottom;
-            }
+                Direction.Left => (possibleNearest, rectangleForFind) => rectangleForFind.Left - possibleNearest.Right,
+                Direction.Right => (possibleNearest, rectangleForFind) => possibleNearest.Left - rectangleForFind.Right,
+                Direction.Top => (possibleNearest, rectangleForFind) => rectangleForFind.Top - possibleNearest.Bottom,
+                _ => (possibleNearest, rectangleForFind) => possibleNearest.Top - rectangleForFind.Bottom,
+            };
         }
     }
 }

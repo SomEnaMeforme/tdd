@@ -12,9 +12,9 @@ namespace TagsCloudVisualization
         private readonly Color backgroundColor = Color.White;
         private readonly Color rectangleColor = Color.DarkBlue;
         private readonly Size imageSize;
-        private readonly List<RectangleWrapper> rectangleStorage;
+        private readonly List<Rectangle> rectangleStorage;
 
-        public CircularCloudVisualizer(List<RectangleWrapper> rectangles, Size imageSize)
+        public CircularCloudVisualizer(List<Rectangle> rectangles, Size imageSize)
         {
             rectangleStorage = rectangles;
             this.imageSize = imageSize;
@@ -22,7 +22,8 @@ namespace TagsCloudVisualization
 
         public void CreateImage(string? filePath = null, bool withSaveSteps = false)
         {
-            var rectangles = NormalizeSizes(rectangleStorage.Select(r => (Rectangle)r));
+            var rectangles = rectangleStorage.Select(r => (Rectangle)r).ToArray();
+            rectangles = NormalizeSizes(rectangles);
 
             using var image = new Bitmap(imageSize.Width, imageSize.Height);
             using var graphics = Graphics.FromImage(image);
@@ -36,7 +37,7 @@ namespace TagsCloudVisualization
                 graphics.DrawRectangle(pen, nextRectangle);
                 if (withSaveSteps)
                 {
-                    SaveImage(image, $"{filePath}Step{1}");
+                    SaveImage(image, filePath);
                 }
             }
             SaveImage(image, filePath);
@@ -51,15 +52,13 @@ namespace TagsCloudVisualization
 
         private Rectangle[] NormalizeSizes(IEnumerable<Rectangle> source)
         {
-            var sourceToArray = source.ToArray();
-
-            var xLength = sourceToArray.Max(r => r.Right) - sourceToArray.Min(r => r.Left);
-            var yLength = sourceToArray.Max(r => r.Bottom) - sourceToArray.Min(r => r.Top);
+            var xLength = source.Max(r => r.Right) - source.Min(r => r.Left);
+            var yLength = source.Max(r => r.Bottom) - source.Min(r => r.Top);
 
             var factorX = GetNormalizeFactorByAxis(imageSize.Width, xLength);
             var factorY = GetNormalizeFactorByAxis(imageSize.Height, yLength);
 
-            return sourceToArray.Select(r => new Rectangle(
+            return source.Select(r => new Rectangle(
                     new Point(r.X * factorX, r.Y * factorY),
                     new Size(r.Width * factorX, r.Height * factorY)))
                 .ToArray();
