@@ -5,22 +5,22 @@ using TagsCloudVisualization;
 
 namespace TagCloudTests;
 
-public class CircleLayerTests
+public class CirclePositionDistributorTests
 {
-    private CircleLayer currentLayer;
+    private CirclePositionDistributor currentLayer;
 
     [SetUp]
     public void SetUp()
     {
         var center = new Point(5, 5);
-        currentLayer = new CircleLayer(center);
+        currentLayer = new CirclePositionDistributor(center);
     }
 
     [Test]
     public void GetNextRectanglePosition_ShouldTryPutRectangleOnCircle()
     {
-        var firstRectangleLocation = currentLayer.GetNextRectanglePosition();
-        var secondRectangleLocation = currentLayer.GetNextRectanglePosition();
+        var firstRectangleLocation = currentLayer.GetNextPosition();
+        var secondRectangleLocation = currentLayer.GetNextPosition();
 
         var radius = currentLayer.Center.CalculateDistanceBetween(firstRectangleLocation);
 
@@ -30,13 +30,13 @@ public class CircleLayerTests
     [Test]
     public void GetNextRectanglePosition_MustExpandCircle_WhenTryPutRectangleOnFullCircle()
     {
-        var firstPoint = currentLayer.GetNextRectanglePosition();
+        var firstPoint = currentLayer.GetNextPosition();
         for (int i = 0; i < 360; i++)
         {
-            currentLayer.GetNextRectanglePosition();
+            currentLayer.GetNextPosition();
         }
 
-        var finalPoint = currentLayer.GetNextRectanglePosition();
+        var finalPoint = currentLayer.GetNextPosition();
 
         finalPoint.CalculateDistanceBetween(currentLayer.Center).Should()
             .BeGreaterThan(firstPoint.CalculateDistanceBetween(currentLayer.Center));

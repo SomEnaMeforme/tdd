@@ -10,7 +10,7 @@ public class CircularCloudLayouter
     private readonly List<Rectangle> storage;
     private readonly CloudCompressor compressor;
     
-    public CircleLayer CurrentLayer { get; }
+    public CirclePositionDistributor CurrentLayer { get; }
 
     public CircularCloudLayouter(Point center) : this(center, [])
     { }
@@ -36,13 +36,13 @@ public class CircularCloudLayouter
     
     public Rectangle PutRectangleWithoutIntersection(Size forInsertionSize)
     {
-        var firstRectanglePosition = CurrentLayer.GetNextRectanglePosition();
+        var firstRectanglePosition = CurrentLayer.GetNextPosition();
         var forInsertion = new Rectangle(firstRectanglePosition, forInsertionSize);
         var intersected = GetRectangleIntersection(forInsertion);
 
         while (intersected != null && intersected.Value != default)
         {
-            var possiblePosition = CurrentLayer.GetNextRectanglePosition();
+            var possiblePosition = CurrentLayer.GetNextPosition();
             forInsertion.Location = possiblePosition;
             intersected = GetRectangleIntersection(forInsertion);
         }
