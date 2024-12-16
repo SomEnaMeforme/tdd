@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 
 namespace TagsCloudVisualization
@@ -7,6 +8,7 @@ namespace TagsCloudVisualization
     {
         private readonly Point compressionPoint;
         private readonly List<Rectangle> cloud;
+        private int minDistanceForMoving = 1;
 
         public CloudCompressor(Point compressTo, List<Rectangle> cloud)
         {
@@ -14,23 +16,52 @@ namespace TagsCloudVisualization
             this.cloud = cloud;
         }
 
-        public Rectangle CompressCloudAfterInsertion(Rectangle insertionRectangle)
+
+        public Rectangle CompressCloudAfterInsertion(Rectangle forInsertion)
         {
-            var toCompressionPoint = GetDirectionsForMovingForCompress(insertionRectangle);
-            foreach (var direction in toCompressionPoint)
+            var toCompressionPoint = GetDirectionsForMovingForCompress(forInsertion);
+            var beforeIntersection = forInsertion;
+            var prevDirectionHasIntersection = false;
+            for (var i = 0; i < toCompressionPoint.Count; i++)
             {
-                insertionRectangle.Location = CalculateRectangleLocationAfterCompress(insertionRectangle, direction);
+                var direction = toCompressionPoint[i];
+
+                while (!forInsertion.IntersectedWithAnyFrom(cloud)
+                && !IsIntersectCenterAxis(direction, forInsertion))
+                {
+                    beforeIntersection = forInsertion;
+                    var distance = GetDistanceForMoving(forInsertion, direction);
+                    forInsertion.Location = MoveByDirection(forInsertion.Location, 
+                        distance == 0 ? minDistanceForMoving : distance, direction);
+                }
+
+                var wasIntersection = !IsIntersectCenterAxis(direction, forInsertion);
+                if (!prevDirectionHasIntersection && wasIntersection)
+                {
+                    forInsertion = beforeIntersection;
+                    prevDirectionHasIntersection = true;
+                }
             }
-            return insertionRectangle;
+            return beforeIntersection;
         }
 
-        private Point CalculateRectangleLocationAfterCompress(Rectangle forMoving, Direction toCenter)
+
+        private int GetDistanceForMoving(Rectangle forMoving, Direction toCenter)
         {
             var nearest = BruteForceNearestFinder.FindNearestByDirection(forMoving, toCenter, cloud);
-            if (nearest == null) return forMoving.Location;
-            var distanceCalculator = BruteForceNearestFinder.GetMinDistanceCalculatorBy(toCenter);
-            var distanceForMove = distanceCalculator(nearest.Value, forMoving);
-            return MoveByDirection(forMoving.Location, distanceForMove, toCenter);
+            if (nearest == null) return minDistanceForMoving;
+            return BruteForceNearestFinder.CalculateMinDistanceBy(toCenter, nearest.Value, forMoving);
+        }
+
+        private bool IsIntersectCenterAxis(Direction toCenter, Rectangle current)
+        {
+            return toCenter switch
+            {
+                Direction.Left => current.Left < compressionPoint.X,
+                Direction.Right => current.Right > compressionPoint.X,
+                Direction.Top => current.Top < compressionPoint.Y,
+                Direction.Bottom => current.Bottom > compressionPoint.Y
+            };
         }
 
         private static Point MoveByDirection(Point forMoving, int distance, Direction whereMoving)
@@ -56,11 +87,11 @@ namespace TagsCloudVisualization
         private List<Direction> GetDirectionsForMovingForCompress(Rectangle forMoving)
         {
             var directions = new List<Direction>();
-            if (forMoving.Bottom < compressionPoint.Y) directions.Add(Direction.Bottom);
-            if (forMoving.Top > compressionPoint.Y) directions.Add(Direction.Top);
-            if (forMoving.Left > compressionPoint.X) directions.Add(Direction.Left);
-            if (forMoving.Right < compressionPoint.X) directions.Add(Direction.Right);
-            
+            if (forMoving.Bottom <= compressionPoint.Y) directions.Add(Direction.Bottom);
+            if (forMoving.Top >= compressionPoint.Y) directions.Add(Direction.Top);
+            if (forMoving.Left >= compressionPoint.X) directions.Add(Direction.Left);
+            if (forMoving.Right <= compressionPoint.X) directions.Add(Direction.Right);
+
             return directions;
         }
     }
