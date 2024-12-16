@@ -5,7 +5,6 @@ namespace TagsCloudVisualization
 {
     internal class CloudCompressor
     {
-        private readonly BruteForceNearestFinder nearestFinder = new ();
         private readonly Point compressionPoint;
         private readonly List<Rectangle> cloud;
 
@@ -27,9 +26,9 @@ namespace TagsCloudVisualization
 
         private Point CalculateRectangleLocationAfterCompress(Rectangle forMoving, Direction toCenter)
         {
-            var nearest = nearestFinder.FindNearestByDirection(forMoving, toCenter, cloud);
+            var nearest = BruteForceNearestFinder.FindNearestByDirection(forMoving, toCenter, cloud);
             if (nearest == null) return forMoving.Location;
-            var distanceCalculator = nearestFinder.GetMinDistanceCalculatorBy(toCenter);
+            var distanceCalculator = BruteForceNearestFinder.GetMinDistanceCalculatorBy(toCenter);
             var distanceForMove = distanceCalculator(nearest.Value, forMoving);
             return MoveByDirection(forMoving.Location, distanceForMove, toCenter);
         }
@@ -58,9 +57,10 @@ namespace TagsCloudVisualization
         {
             var directions = new List<Direction>();
             if (forMoving.Bottom < compressionPoint.Y) directions.Add(Direction.Bottom);
+            if (forMoving.Top > compressionPoint.Y) directions.Add(Direction.Top);
             if (forMoving.Left > compressionPoint.X) directions.Add(Direction.Left);
             if (forMoving.Right < compressionPoint.X) directions.Add(Direction.Right);
-            if (forMoving.Top > compressionPoint.Y) directions.Add(Direction.Top);
+            
             return directions;
         }
     }
