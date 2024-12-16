@@ -2,8 +2,9 @@
 using NUnit.Framework;
 using FluentAssertions;
 using System.Drawing;
+using TagsCloudVisualization;
 
-namespace TagsCloudVisualization.Tests
+namespace TagCloudTests
 {
     public class BruteForceNearestFinderTests
     {

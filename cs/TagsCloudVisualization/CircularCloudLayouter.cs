@@ -15,7 +15,7 @@ public class CircularCloudLayouter
     public CircularCloudLayouter(Point center) : this(center, [])
     { }
 
-    internal CircularCloudLayouter(Point center, List<Rectangle> storage)
+    public CircularCloudLayouter(Point center, List<Rectangle> storage)
     {
         this.storage = storage;
         CurrentLayer = new(center);
