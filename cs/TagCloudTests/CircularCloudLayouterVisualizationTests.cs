@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Drawing;
 using NUnit.Framework;
+using TagsCloudVisualization;
 
-namespace TagsCloudVisualization.Tests;
+namespace TagCloudTests;
 
 public class CircularCloudLayouterVisualizationTests
 {
@@ -13,8 +14,8 @@ public class CircularCloudLayouterVisualizationTests
     [SetUp]
     public void SetUp()
     {
-        center = new Point(500, 500);
-        visualizer = new CircularCloudVisualizer(GenerateRectangles(center, 100, 5, 1000), new Size(1000, 1000));
+        center = new Point(750, 750);
+        visualizer = new CircularCloudVisualizer(GenerateRectangles(center, 100, 30, 100));
     }
 
     [Test]
@@ -33,7 +34,7 @@ public class CircularCloudLayouterVisualizationTests
     {
         var rnd = new Random();
         var storage = new List<Rectangle>();
-        var layouter = new CircularCloudLayouter(center, storage);
+        var layouter = CircularCloudLayouter.CreateLayouterWithStartRectangles(center, storage);
         for (var i = 0; i < count; i++) layouter.PutNextRectangle(new Size(rnd.Next(minSize, maxSize),
             rnd.Next(minSize, maxSize)));
 

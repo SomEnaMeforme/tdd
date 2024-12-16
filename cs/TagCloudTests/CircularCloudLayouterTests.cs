@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Reflection;
 using FluentAssertions;
 using NUnit.Framework;
 using NUnit.Framework.Interfaces;
+using TagsCloudVisualization;
 
-namespace TagsCloudVisualization.Tests;
+namespace TagCloudTests;
 
 public class CircularCloudLayouterTests
 {
@@ -42,7 +40,7 @@ public class CircularCloudLayouterTests
     {
         defaultCenter = new Point(5, 5);
         storage = [];
-        layouter = new CircularCloudLayouter(defaultCenter, storage);
+        layouter = CircularCloudLayouter.CreateLayouterWithStartRectangles(defaultCenter, storage);
     }
 
     [TearDown]
@@ -50,16 +48,16 @@ public class CircularCloudLayouterTests
     {
         if (TestContext.CurrentContext.Result.Outcome.Status == TestStatus.Failed)
         {
-            var testObj = TestContext.CurrentContext.Test.Parent?.Fixture as CircularCloudLayouterTests;
-            var info = typeof(CircularCloudLayouterTests)
-                .GetField("storage", BindingFlags.NonPublic | BindingFlags.Instance);
-            var st = info?.GetValue(testObj);
-
-            var visualizer = new CircularCloudVisualizer(st as List<Rectangle> ?? [], new Size(1000, 1000));
-            var pathFile = Path.Combine(Directory.GetCurrentDirectory(), TestContext.CurrentContext.Test.Name);
-            visualizer.CreateImage(pathFile);
-            TestContext.Out.WriteLine($"Tag cloud visualization saved to file {pathFile}");
+            SaveImageOnFail();
         }
+    }
+
+    private void SaveImageOnFail()
+    {
+        var visualizer = new CircularCloudVisualizer(storage);
+        var pathFile = Path.Combine(Directory.GetCurrentDirectory(), TestContext.CurrentContext.Test.Name);
+        visualizer.CreateImage(pathFile);
+        TestContext.Out.WriteLine($"Tag cloud visualization saved to file {pathFile}");
     }
 
     [TestCase(0, 4, TestName = "WhenWidthZero")]

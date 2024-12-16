@@ -9,17 +9,21 @@ public class CircularCloudLayouter
 {
     private readonly List<Rectangle> storage;
     private readonly CloudCompressor compressor;
-    
-    public CirclePositionDistributor CurrentLayer { get; }
+    private readonly CirclePositionDistributor distributor;
 
     public CircularCloudLayouter(Point center) : this(center, [])
     { }
 
-    public CircularCloudLayouter(Point center, List<Rectangle> storage)
+    private CircularCloudLayouter(Point center, List<Rectangle> storage) // TODO: протечка абстракций
     {
         this.storage = storage;
-        CurrentLayer = new(center);
+        distributor = new(center);
         compressor = new(center, storage);
+    }
+
+    public static CircularCloudLayouter CreateLayouterWithStartRectangles(Point center, List<Rectangle> storage)
+    {
+        return new CircularCloudLayouter(center, storage);
     }
 
     public Rectangle PutNextRectangle(Size nextRectangle)
@@ -36,16 +40,15 @@ public class CircularCloudLayouter
     
     public Rectangle PutRectangleWithoutIntersection(Size forInsertionSize)
     {
-        var firstRectanglePosition = CurrentLayer.GetNextPosition();
-        var forInsertion = new Rectangle(firstRectanglePosition, forInsertionSize);
-        var intersected = GetRectangleIntersection(forInsertion);
-
-        while (intersected != null && intersected.Value != default)
+        bool isIntersected;
+        Rectangle forInsertion;
+        do
         {
-            var possiblePosition = CurrentLayer.GetNextPosition();
-            forInsertion.Location = possiblePosition;
-            intersected = GetRectangleIntersection(forInsertion);
+            var possiblePosition = distributor.GetNextPosition();
+            forInsertion = new Rectangle(possiblePosition, forInsertionSize);
+            isIntersected = forInsertion.IntersectedWithAnyFrom(storage);
         }
+        while (isIntersected);
 
         return forInsertion;
     }
@@ -54,12 +57,5 @@ public class CircularCloudLayouter
     {
         if (forInsertion.Width <= 0 || forInsertion.Height <= 0)
             throw new ArgumentException($"Rectangle has incorrect size: width = {forInsertion.Width}, height = {forInsertion.Height}");
-    }
-
-    private Rectangle? GetRectangleIntersection(Rectangle forInsertion)
-    {
-        if (storage.Count == 0) return null;
-        return storage.FirstOrDefault(r => forInsertion != r
-                                             && forInsertion.IntersectsWith(r));
     }
 }

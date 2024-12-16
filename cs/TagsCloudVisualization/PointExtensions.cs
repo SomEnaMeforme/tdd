@@ -11,7 +11,9 @@ namespace TagsCloudVisualization
     {
         public static int CalculateDistanceBetween(this Point current, Point other)
         {
-            return (int)Math.Ceiling(Math.Sqrt((current.X - other.X) * (current.X - other.X) + (current.Y - other.Y) * (current.Y - other.Y)));
+            return (int)Math.Ceiling(Math.Sqrt(
+                (current.X - other.X) * (current.X - other.X) 
+                + (current.Y - other.Y) * (current.Y - other.Y)));
         }
     }
 }

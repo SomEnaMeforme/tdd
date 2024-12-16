@@ -24,7 +24,7 @@
 
   <ItemGroup>
     <Folder Include="ImagesTest\" />
-    <Folder Include="Images\" />
+    <Folder Include="CloudVisualizer\" />
   </ItemGroup>
 
 </Project>
