@@ -27,7 +27,7 @@ namespace TagsCloudVisualization
                 var direction = toCompressionPoint[i];
 
                 while (!forInsertion.IntersectedWithAnyFrom(cloud)
-                && !IsIntersectCenterAxis(direction, forInsertion))
+                && !IsIntersectCompressionPointAxis(direction, forInsertion))
                 {
                     beforeIntersection = forInsertion;
                     var distance = GetDistanceForMoving(forInsertion, direction);
@@ -35,7 +35,7 @@ namespace TagsCloudVisualization
                         distance == 0 ? minDistanceForMoving : distance, direction);
                 }
 
-                var wasIntersection = !IsIntersectCenterAxis(direction, forInsertion);
+                var wasIntersection = !IsIntersectCompressionPointAxis(direction, forInsertion);
                 if (!prevDirectionHasIntersection && wasIntersection)
                 {
                     forInsertion = beforeIntersection;
@@ -46,16 +46,16 @@ namespace TagsCloudVisualization
         }
 
 
-        private int GetDistanceForMoving(Rectangle forMoving, Direction toCenter)
+        private int GetDistanceForMoving(Rectangle forMoving, Direction toCompressionPoint)
         {
-            var nearest = BruteForceNearestFinder.FindNearestByDirection(forMoving, toCenter, cloud);
+            var nearest = BruteForceNearestFinder.FindNearestByDirection(forMoving, toCompressionPoint, cloud);
             if (nearest == null) return minDistanceForMoving;
-            return BruteForceNearestFinder.CalculateMinDistanceBy(toCenter, nearest.Value, forMoving);
+            return BruteForceNearestFinder.CalculateMinDistanceBy(toCompressionPoint, nearest.Value, forMoving);
         }
 
-        private bool IsIntersectCenterAxis(Direction toCenter, Rectangle current)
+        private bool IsIntersectCompressionPointAxis(Direction toCompressionPoint, Rectangle current)
         {
-            return toCenter switch
+            return toCompressionPoint switch
             {
                 Direction.Left => current.Left < compressionPoint.X,
                 Direction.Right => current.Right > compressionPoint.X,
