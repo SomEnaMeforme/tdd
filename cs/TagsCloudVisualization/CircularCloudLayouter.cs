@@ -14,7 +14,7 @@ public class CircularCloudLayouter
     public CircularCloudLayouter(Point center) : this(center, [])
     { }
 
-    private CircularCloudLayouter(Point center, List<Rectangle> storage) // TODO: протечка абстракций
+    private CircularCloudLayouter(Point center, List<Rectangle> storage)
     {
         this.storage = storage;
         distributor = new(center);
